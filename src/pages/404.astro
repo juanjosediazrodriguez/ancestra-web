@@ -3,6 +3,15 @@ import Base from '../layouts/Base.astro';
 ---
 
 <Base titulo="Página no encontrada">
-  <h1>No encontramos esta página</h1>
-  <p>Puede que la mochila ya no esté publicada. <a href="/catalogo">Ver el catálogo</a></p>
+  <section class="contenedor no-encontrada">
+    <span class="sobretitulo">Error 404</span>
+    <h1>Esta página se nos destejió</h1>
+    <p>Puede que la mochila ya no esté publicada o que el enlace tenga un error.</p>
+    <a class="boton" href="/catalogo">Ver el catálogo</a>
+  </section>
 </Base>
+
+<style>
+  .no-encontrada { text-align: center; padding-block: clamp(5rem, 14vw, 9rem); }
+  .no-encontrada p { color: var(--cafe-medio); }
+</style>

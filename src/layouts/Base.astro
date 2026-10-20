@@ -1,21 +1,37 @@
 ---
+import '@fontsource-variable/fraunces';
+import '@fontsource-variable/dm-sans';
 import '../styles/global.css';
-import { usandoMuestra } from '../lib/catalogo';
+import Patron from '../components/Patron.astro';
+import { numeroWhatsApp, usandoMuestra } from '../lib/catalogo';
+import { linkContacto, numeroValido } from '../lib/whatsapp';
 
 interface Props {
   titulo: string;
   descripcion?: string;
   /** Imagen para la vista previa al compartir el link (WhatsApp, Facebook). */
   imagen?: { url: string; alt: string };
+  /** Si el encabezado va encima de una foto (portada), empieza transparente. */
+  encabezadoSobreFoto?: boolean;
 }
 
-const { titulo, descripcion = 'Mochilas tejidas a mano por artesanos wayuu, arhuacos y kankuamos. Envíos a toda Colombia y México.', imagen } = Astro.props;
+const {
+  titulo,
+  descripcion = 'Mochilas tejidas a mano por artesanos wayuu, arhuacos y kankuamos. Envíos a toda Colombia y México.',
+  imagen,
+  encabezadoSobreFoto = false,
+} = Astro.props;
 const tituloCompleto = titulo === 'Inicio' ? 'Ancestra · Arte & Tradición' : `${titulo} · Ancestra`;
 const ruta = Astro.url.pathname;
 const actual = (href: string) => (href === '/' ? ruta === '/' : ruta.startsWith(href));
-// Open Graph exige URLs absolutas. Astro.site sale de astro.config.mjs (el dominio real cuando exista).
+// Open Graph exige URLs absolutas. Astro.site sale de SITE_URL (ver astro.config.mjs).
 const urlCanonica = new URL(ruta, Astro.site ?? Astro.url).href;
 const urlImagen = imagen ? new URL(imagen.url, Astro.site ?? Astro.url).href : null;
+const whatsappListo = numeroValido(numeroWhatsApp);
+const enlaces = [
+  { href: '/', texto: 'Inicio' },
+  { href: '/catalogo', texto: 'Catálogo' },
+];
 ---
 
 <!doctype html>
@@ -23,6 +39,7 @@ const urlImagen = imagen ? new URL(imagen.url, Astro.site ?? Astro.url).href : n
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f5ede0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{tituloCompleto}</title>
     <meta name="description" content={descripcion} />
@@ -42,6 +59,8 @@ const urlImagen = imagen ? new URL(imagen.url, Astro.site ?? Astro.url).href : n
         <meta name="twitter:card" content="summary_large_image" />
       </>
     )}
+    <!-- Marca que hay JS antes de pintar, para que las animaciones no escondan contenido sin JS -->
+    <script is:inline>document.documentElement.classList.add('js');</script>
   </head>
   <body>
     <a class="saltar" href="#contenido">Saltar al contenido</a>
@@ -50,22 +69,29 @@ const urlImagen = imagen ? new URL(imagen.url, Astro.site ?? Astro.url).href : n
       <p class="aviso-muestra" role="note">Estás viendo datos de muestra. Configura Sanity para ver el catálogo real.</p>
     )}
 
-    <header class="encabezado">
-      <a href="/" class="marca" aria-label="Ancestra, inicio">
-        <span class="marca-nombre">Ancestra</span>
-        <span class="marca-lema">Arte &amp; Tradición</span>
-      </a>
-      <nav aria-label="Principal">
-        <ul>
-          <li><a href="/" aria-current={actual('/') ? 'page' : undefined}>Inicio</a></li>
-          <li><a href="/catalogo" aria-current={actual('/catalogo') ? 'page' : undefined}>Catálogo</a></li>
-          <li>
-            <a href="/carrito" data-etiqueta-carrito aria-label="Carrito" aria-current={actual('/carrito') ? 'page' : undefined}>
-              Carrito <span class="contador" data-contador-carrito hidden>0</span>
-            </a>
-          </li>
-        </ul>
-      </nav>
+    <header class="encabezado" data-encabezado data-sobre-foto={encabezadoSobreFoto}>
+      <div class="encabezado-interior contenedor">
+        <a href="/" class="marca" aria-label="Ancestra, inicio">
+          <span class="marca-nombre">Ancestra</span>
+          <span class="marca-lema">Arte &amp; Tradición</span>
+        </a>
+        <nav aria-label="Principal">
+          <ul>
+            {enlaces.map((e) => (
+              <li class={e.href === '/' ? 'enlace-inicio' : undefined}><a href={e.href} aria-current={actual(e.href) ? 'page' : undefined}>{e.texto}</a></li>
+            ))}
+            <li>
+              <a href="/carrito" class="enlace-carrito" data-etiqueta-carrito aria-label="Carrito" aria-current={actual('/carrito') ? 'page' : undefined}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                  <path d="M6 7h12l-1 13H7L6 7Z" /><path d="M9 7a3 3 0 0 1 6 0" />
+                </svg>
+                <span class="texto-carrito">Carrito</span>
+                <span class="contador" data-contador-carrito hidden>0</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
     </header>
 
     <main id="contenido">
@@ -73,18 +99,120 @@ const urlImagen = imagen ? new URL(imagen.url, Astro.site ?? Astro.url).href : n
     </main>
 
     <footer class="pie">
-      <p>Cada puntada guarda una memoria.</p>
-      <p>
-        <a href="https://www.instagram.com/mochilasancestra/" rel="noopener" target="_blank">Instagram</a>
-        ·
-        <a href="https://www.tiktok.com/@mochilasancestra" rel="noopener" target="_blank">TikTok</a>
-      </p>
-      <p class="pie-legal">Envíos nacionales y a México.</p>
+      <Patron color="var(--terracota)" />
+      <div class="pie-interior contenedor">
+        <div>
+          <p class="pie-marca">Ancestra</p>
+          <p class="pie-lema">Cada puntada guarda una memoria.</p>
+        </div>
+        <div>
+          <p class="pie-titulo">Tienda</p>
+          <ul>
+            <li><a href="/catalogo">Catálogo</a></li>
+            <li><a href="/catalogo?tipo=unica">Piezas únicas</a></li>
+            <li><a href="/catalogo?tipo=mostacilla">Mostacilla</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="pie-titulo">Síguenos</p>
+          <ul>
+            <li><a href="https://www.instagram.com/mochilasancestra/" rel="noopener" target="_blank">Instagram</a></li>
+            <li><a href="https://www.tiktok.com/@mochilasancestra" rel="noopener" target="_blank">TikTok</a></li>
+          </ul>
+        </div>
+        <p class="pie-legal">Hecho a mano en Colombia · Envíos nacionales y a México</p>
+      </div>
     </footer>
+
+    {whatsappListo && (
+      <a class="whatsapp-flotante" href={linkContacto(numeroWhatsApp)} rel="noopener" target="_blank" aria-label="Escríbenos por WhatsApp">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .1-1.3c0-.1-.2-.2-.4-.3Z" />
+        </svg>
+      </a>
+    )}
 
     <script>
       import { pintarContador } from '../scripts/almacen';
       pintarContador();
+
+      // Encabezado: cambia de transparente a sólido al bajar
+      const encabezado = document.querySelector<HTMLElement>('[data-encabezado]');
+      const alBajar = () => encabezado?.classList.toggle('con-fondo', window.scrollY > 24);
+      alBajar();
+      window.addEventListener('scroll', alBajar, { passive: true });
+
+      // Aparición de secciones al entrar en pantalla
+      const observador = new IntersectionObserver(
+        (entradas) => entradas.forEach((e) => {
+          if (e.isIntersecting) { e.target.classList.add('visible'); observador.unobserve(e.target); }
+        }),
+        { rootMargin: '0px 0px -10% 0px' },
+      );
+      document.querySelectorAll('[data-revelar]').forEach((el) => observador.observe(el));
     </script>
   </body>
 </html>
+
+<style>
+  .aviso-muestra {
+    margin: 0; padding: 0.4rem 1rem; text-align: center; font-size: 0.85rem;
+    background: var(--cafe); color: var(--blanco);
+  }
+
+  .encabezado {
+    position: sticky; top: 0; z-index: 50;
+    transition: background-color 0.3s, box-shadow 0.3s, color 0.3s;
+    background: rgb(245 237 224 / 0.92);
+    backdrop-filter: blur(10px);
+  }
+  /* Sobre la foto de la portada: transparente y en claro hasta que se baja */
+  .encabezado[data-sobre-foto='true'] { position: fixed; inset-inline: 0; background: transparent; backdrop-filter: none; color: var(--blanco); }
+  .encabezado[data-sobre-foto='true']:global(.con-fondo) { background: rgb(245 237 224 / 0.94); backdrop-filter: blur(10px); color: var(--cafe); }
+  .encabezado:global(.con-fondo) { box-shadow: 0 1px 0 rgb(46 33 23 / 0.08); }
+
+  .encabezado-interior { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: var(--alto-encabezado); }
+  .marca { display: flex; flex-direction: column; text-decoration: none; line-height: 1.1; }
+  .marca-nombre { font-family: var(--titulo); font-size: 1.55rem; letter-spacing: 0.22em; text-transform: uppercase; }
+  .marca-lema { font-size: 0.62rem; letter-spacing: 0.32em; text-transform: uppercase; opacity: 0.8; }
+
+  nav ul { display: flex; align-items: center; gap: clamp(0.75rem, 3vw, 2rem); list-style: none; margin: 0; padding: 0; }
+  nav a { text-decoration: none; font-weight: 500; padding: 0.3rem 0; border-bottom: 2px solid transparent; transition: border-color 0.2s; }
+  nav a:hover, nav a[aria-current='page'] { border-color: currentColor; }
+  .enlace-carrito { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .contador {
+    min-width: 1.4rem; height: 1.4rem; padding: 0 0.35rem; border-radius: 999px;
+    display: inline-grid; place-items: center; font-size: 0.75rem; font-weight: 700;
+    background: var(--terracota); color: var(--blanco);
+  }
+  .contador[hidden] { display: none; }
+  @media (max-width: 480px) {
+    .texto-carrito { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .marca-lema { display: none; }
+    .marca-nombre { font-size: 1.3rem; }
+    /* El logo ya lleva al inicio */
+    .enlace-inicio { display: none; }
+  }
+
+  .pie { background: var(--cafe); color: var(--arena); margin-top: clamp(4rem, 10vw, 7rem); }
+  .pie-interior {
+    display: grid; gap: 2rem; padding-block: 3rem 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  .pie-marca { font-family: var(--titulo); font-size: 2rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--blanco); margin: 0; }
+  .pie-lema { font-family: var(--titulo); font-style: italic; }
+  .pie-titulo { font-size: 0.75rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--blanco); font-weight: 600; }
+  .pie ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.4rem; }
+  .pie a { text-decoration: none; }
+  .pie a:hover { text-decoration: underline; }
+  .pie-legal { grid-column: 1 / -1; border-top: 1px solid rgb(232 220 198 / 0.2); padding-top: 1.5rem; font-size: 0.85rem; margin: 0; }
+
+  .whatsapp-flotante {
+    position: fixed; right: 1.25rem; bottom: 1.25rem; z-index: 60;
+    width: 3.5rem; height: 3.5rem; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--oliva); color: var(--blanco); box-shadow: var(--sombra);
+    transition: transform 0.2s;
+  }
+  .whatsapp-flotante:hover { transform: scale(1.06); }
+</style>

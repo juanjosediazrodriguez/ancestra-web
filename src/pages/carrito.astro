@@ -1,49 +1,113 @@
 ---
 import Base from '../layouts/Base.astro';
-import { numeroWhatsApp } from '../lib/catalogo';
+import TarjetaMochila from '../components/TarjetaMochila.astro';
+import { numeroWhatsApp, obtenerMochilas } from '../lib/catalogo';
 import { numeroValido } from '../lib/whatsapp';
 
 const whatsappListo = numeroValido(numeroWhatsApp);
+const mochilas = await obtenerMochilas();
+// Sugerencias para el carrito vacío
+const sugeridas = mochilas.filter((m) => m.disponible).slice(0, 3);
+// Foto actual de cada mochila, por referencia. El carrito la usa en vez de la guardada en el navegador,
+// así se ve la foto vigente aunque la cambien en Sanity o el carrito sea anterior a este campo.
+// Se escapa "<" para que ningún valor pueda cerrar la etiqueta <script>.
+const fotosActuales = JSON.stringify(
+  Object.fromEntries(mochilas.map((m) => [m.referencia, m.fotos[0]?.miniatura ?? null])),
+).replace(/</g, '\\u003c');
+const pasos = ['Tu carrito', 'Pedido por WhatsApp', 'Envío por Servientrega'];
 ---
 
 <Base titulo="Carrito">
-  <h1>Tu carrito</h1>
+  <div class="contenedor">
+    <header class="cabecera">
+      <h1>Tu carrito</h1>
+      <ol class="pasos" aria-label="Pasos de la compra">
+        {pasos.map((p, i) => (
+          <li aria-current={i === 0 ? 'step' : undefined}><span class="paso-n" aria-hidden="true">{i + 1}</span>{p}</li>
+        ))}
+      </ol>
+    </header>
 
-  <noscript><p>El carrito necesita JavaScript activado. También puedes escribirnos directo por WhatsApp o Instagram.</p></noscript>
+    <noscript><p>El carrito necesita JavaScript activado. También puedes escribirnos directo por WhatsApp o Instagram.</p></noscript>
+    <script is:inline type="application/json" id="fotos-actuales" set:html={fotosActuales} />
 
-  <div data-carrito hidden>
-    <p data-vacio hidden>Tu carrito está vacío. <a href="/catalogo">Ver el catálogo</a></p>
-
-    <div data-contenido hidden>
-      <ul class="lineas" data-lineas></ul>
-      <p class="total" data-total aria-live="polite"></p>
-      <p class="nota">El envío se cotiza por WhatsApp según tu ciudad (Servientrega). Lo paga quien compra.</p>
-
-      <form class="finalizar" data-finalizar data-numero={numeroWhatsApp} novalidate>
-        <h2>Finalizar por WhatsApp</h2>
-        <p>Te abrimos WhatsApp con el pedido ya escrito. Ahí confirmamos disponibilidad, el envío y el pago.</p>
-        <div>
-          <label for="nombre">Tu nombre</label>
-          <input id="nombre" name="nombre" autocomplete="name" required maxlength="60" aria-describedby="error-nombre" />
-          <p class="error" id="error-nombre" data-error="nombre"></p>
-        </div>
-        <div>
-          <label for="ciudad">Ciudad de envío</label>
-          <input id="ciudad" name="ciudad" autocomplete="address-level2" required maxlength="60" aria-describedby="error-ciudad" />
-          <p class="error" id="error-ciudad" data-error="ciudad"></p>
-        </div>
-        {whatsappListo ? (
-          <button class="boton" type="submit">Enviar pedido por WhatsApp</button>
-        ) : (
-          <p class="error" role="alert">Falta configurar el número de WhatsApp (PUBLIC_WHATSAPP_NUMBER).</p>
+    <div data-carrito hidden>
+      <section class="vacio" data-vacio hidden aria-labelledby="titulo-vacio">
+        <img src="/ilustracion-portada.svg" alt="" width="160" height="180" />
+        <h2 id="titulo-vacio">Tu carrito está vacío</h2>
+        <p>Cada mochila es tejida a mano. Encuentra la tuya en el catálogo.</p>
+        <a class="boton" href="/catalogo">Ver el catálogo</a>
+        {sugeridas.length > 0 && (
+          <div class="sugeridas">
+            <h3>Recién llegadas</h3>
+            <ul class="rejilla">
+              {sugeridas.map((m) => <li><TarjetaMochila mochila={m} /></li>)}
+            </ul>
+          </div>
         )}
-      </form>
+      </section>
+
+      <div class="disposicion" data-contenido hidden>
+        <section aria-labelledby="titulo-productos">
+          <div class="productos-cabecera">
+            <h2 id="titulo-productos" class="visualmente-oculto">Productos</h2>
+            <p data-conteo aria-live="polite"></p>
+            <a href="/catalogo">← Seguir comprando</a>
+          </div>
+          <ul class="lineas" data-lineas></ul>
+        </section>
+
+        <aside class="resumen" aria-labelledby="titulo-resumen">
+          <h2 id="titulo-resumen">Resumen</h2>
+          <dl class="cuentas">
+            <div><dt>Productos</dt><dd data-subtotal></dd></div>
+            <div><dt>Envío</dt><dd>Se cotiza por WhatsApp</dd></div>
+          </dl>
+          <p class="total" data-total aria-live="polite"></p>
+
+          <form class="finalizar" id="form-finalizar" data-finalizar data-numero={numeroWhatsApp} novalidate>
+            <div>
+              <label for="nombre">Tu nombre</label>
+              <input id="nombre" name="nombre" autocomplete="name" required maxlength="60" aria-describedby="error-nombre" />
+              <p class="error" id="error-nombre" data-error="nombre"></p>
+            </div>
+            <div>
+              <label for="ciudad">Ciudad de envío</label>
+              <input id="ciudad" name="ciudad" autocomplete="address-level2" required maxlength="60" aria-describedby="error-ciudad" />
+              <p class="error" id="error-ciudad" data-error="ciudad"></p>
+            </div>
+            {whatsappListo ? (
+              <button class="boton boton-ancho" type="submit">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm4.5 12.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .1-1.3c0-.1-.2-.2-.4-.3Z" /></svg>
+                Enviar pedido por WhatsApp
+              </button>
+            ) : (
+              <p class="error" role="alert">Falta configurar el número de WhatsApp (PUBLIC_WHATSAPP_NUMBER).</p>
+            )}
+          </form>
+
+          <ul class="confianza">
+            <li><span aria-hidden="true">✦</span> Tejidas a mano por artesanos</li>
+            <li><span aria-hidden="true">✦</span> Confirmamos todo por chat antes de que pagues</li>
+            <li><span aria-hidden="true">✦</span> Envío por Servientrega a Colombia y México</li>
+          </ul>
+        </aside>
+      </div>
     </div>
   </div>
+
+  {whatsappListo && (
+    <div class="barra-movil" data-barra-movil hidden>
+      <p data-barra-total></p>
+      <button class="boton" type="submit" form="form-finalizar">Enviar por WhatsApp</button>
+    </div>
+  )}
 </Base>
 
 <script>
-  import { cambiarCantidad, quitar, MAX_CANTIDAD_MOSTACILLA, type ItemCarrito } from '../lib/carrito';
+  import {
+    cambiarCantidad, contarUnidades, fotoValida, hayPreciosPorConfirmar, quitar, totalConocido, MAX_CANTIDAD_MOSTACILLA, type ItemCarrito,
+  } from '../lib/carrito';
   import { formatearPrecio, linkPedido, textoTotal } from '../lib/whatsapp';
   import { guardarCarrito, leerCarrito } from '../scripts/almacen';
 
@@ -51,62 +115,105 @@ const whatsappListo = numeroValido(numeroWhatsApp);
   const vacio = raiz.querySelector<HTMLElement>('[data-vacio]')!;
   const contenido = raiz.querySelector<HTMLElement>('[data-contenido]')!;
   const lista = raiz.querySelector<HTMLUListElement>('[data-lineas]')!;
+  const conteo = raiz.querySelector<HTMLElement>('[data-conteo]')!;
+  const subtotal = raiz.querySelector<HTMLElement>('[data-subtotal]')!;
   const total = raiz.querySelector<HTMLElement>('[data-total]')!;
   const form = raiz.querySelector<HTMLFormElement>('[data-finalizar]')!;
+  const barra = document.querySelector<HTMLElement>('[data-barra-movil]');
+  const barraTotal = document.querySelector<HTMLElement>('[data-barra-total]');
   raiz.hidden = false;
+
+  // Foto vigente por referencia (viene del catálogo al construir el sitio)
+  let fotosActuales: Record<string, unknown> = {};
+  try {
+    fotosActuales = JSON.parse(document.getElementById('fotos-actuales')?.textContent || '{}');
+  } catch {
+    /* sin mapa, se usa la foto guardada en el carrito */
+  }
+  const fotoDe = (item: ItemCarrito): string | null => {
+    const actual = fotosActuales[item.referencia];
+    return fotoValida(actual) ? actual : item.foto;
+  };
+
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, clase?: string, texto?: string) => {
+    const e = document.createElement(tag);
+    if (clase) e.className = clase;
+    if (texto !== undefined) e.textContent = texto;
+    return e;
+  };
 
   // Se construye el DOM con textContent (no innerHTML): el carrito viene de localStorage y no se confía en él.
   function linea(item: ItemCarrito): HTMLLIElement {
-    const li = document.createElement('li');
-    li.className = 'linea';
+    const li = el('li', 'linea');
 
-    const info = document.createElement('div');
-    const nombre = document.createElement('p');
-    nombre.className = 'linea-nombre';
-    nombre.textContent = item.nombre;
-    const detalle = document.createElement('p');
-    detalle.className = 'linea-detalle';
-    detalle.textContent = [`Ref. ${item.referencia}`, item.color && `Color ${item.color}`, item.tipo === 'unica' && 'Pieza única']
-      .filter(Boolean)
-      .join(' · ');
+    const foto = el('a', 'linea-foto');
+    foto.href = `/mochila/${item.slug}`;
+    foto.tabIndex = -1;
+    foto.setAttribute('aria-hidden', 'true');
+    const urlFoto = fotoDe(item);
+    if (urlFoto) {
+      const img = el('img');
+      Object.assign(img, { src: urlFoto, alt: '', width: 96, height: 120, loading: 'lazy' });
+      foto.append(img);
+    }
+
+    const info = el('div', 'linea-info');
+    const nombre = el('a', 'linea-nombre', item.nombre);
+    nombre.href = `/mochila/${item.slug}`;
+    const detalle = el('p', 'linea-detalle',
+      [item.tipo === 'unica' ? 'Pieza única' : 'Mostacilla', item.color && `Color ${item.color}`, `Ref. ${item.referencia}`]
+        .filter(Boolean).join(' · '));
     info.append(nombre, detalle);
 
-    const acciones = document.createElement('div');
-    acciones.className = 'linea-acciones';
+    const acciones = el('div', 'linea-acciones');
     if (item.tipo === 'mostacilla') {
-      const id = `cant-${item.referencia}-${item.color ?? ''}`.replace(/\W/g, '_');
-      const etiqueta = document.createElement('label');
-      etiqueta.htmlFor = id;
-      etiqueta.className = 'visualmente-oculto';
-      etiqueta.textContent = `Cantidad de ${item.nombre}`;
-      const input = document.createElement('input');
-      Object.assign(input, { id, type: 'number', min: '1', max: String(MAX_CANTIDAD_MOSTACILLA), value: String(item.cantidad) });
-      input.inputMode = 'numeric';
-      input.addEventListener('change', () => {
-        guardarCarrito(cambiarCantidad(leerCarrito(), item.referencia, item.color, Number(input.value) || 1));
-      });
-      acciones.append(etiqueta, input);
+      const selector = el('div', 'selector');
+      selector.setAttribute('role', 'group');
+      selector.setAttribute('aria-label', `Cantidad de ${item.nombre}`);
+      const cambiar = (n: number) => guardarCarrito(cambiarCantidad(leerCarrito(), item.referencia, item.color, n));
+      const menos = el('button', 'selector-boton', '−');
+      menos.type = 'button';
+      menos.setAttribute('aria-label', `Quitar una unidad de ${item.nombre}`);
+      menos.disabled = item.cantidad <= 1;
+      menos.addEventListener('click', () => cambiar(item.cantidad - 1));
+      const valor = el('span', 'selector-valor', String(item.cantidad));
+      valor.setAttribute('aria-live', 'polite');
+      const mas = el('button', 'selector-boton', '+');
+      mas.type = 'button';
+      mas.setAttribute('aria-label', `Agregar una unidad de ${item.nombre}`);
+      mas.disabled = item.cantidad >= MAX_CANTIDAD_MOSTACILLA;
+      mas.addEventListener('click', () => cambiar(item.cantidad + 1));
+      selector.append(menos, valor, mas);
+      acciones.append(selector);
+    } else {
+      acciones.append(el('span', 'linea-unica', '1 unidad'));
     }
-    const precio = document.createElement('span');
-    precio.textContent = formatearPrecio(item.precio === null ? null : item.precio * item.cantidad);
-    const boton = document.createElement('button');
+
+    const lado = el('div', 'linea-lado');
+    lado.append(el('span', 'linea-precio', formatearPrecio(item.precio === null ? null : item.precio * item.cantidad)));
+    const boton = el('button', 'quitar', 'Quitar');
     boton.type = 'button';
-    boton.className = 'boton boton-secundario';
-    boton.textContent = 'Quitar';
     boton.setAttribute('aria-label', `Quitar ${item.nombre} del carrito`);
     boton.addEventListener('click', () => guardarCarrito(quitar(leerCarrito(), item.referencia, item.color)));
-    acciones.append(precio, boton);
+    lado.append(boton);
 
-    li.append(info, acciones);
+    li.append(foto, info, acciones, lado);
     return li;
   }
 
   function pintar() {
     const carrito = leerCarrito();
+    const n = contarUnidades(carrito);
     vacio.hidden = carrito.length > 0;
     contenido.hidden = carrito.length === 0;
+    if (barra) barra.hidden = carrito.length === 0;
     lista.replaceChildren(...carrito.map(linea));
+    conteo.textContent = `${n} ${n === 1 ? 'producto' : 'productos'}`;
+    const sinPrecio = hayPreciosPorConfirmar(carrito);
+    const todoSinPrecio = carrito.every((i) => i.precio === null);
+    subtotal.textContent = todoSinPrecio ? 'Por confirmar' : `${formatearPrecio(totalConocido(carrito))}${sinPrecio ? ' + por confirmar' : ''}`;
     total.textContent = textoTotal(carrito);
+    if (barraTotal) barraTotal.textContent = `${n} ${n === 1 ? 'producto' : 'productos'} · ${todoSinPrecio ? 'precio por confirmar' : formatearPrecio(totalConocido(carrito))}`;
   }
 
   function validar(campo: 'nombre' | 'ciudad', valor: string): boolean {
@@ -117,6 +224,14 @@ const whatsappListo = numeroValido(numeroWhatsApp);
     input.setAttribute('aria-invalid', String(!ok));
     return ok;
   }
+
+  // Al corregir un campo marcado con error, el mensaje desaparece sin esperar a enviar de nuevo
+  form.addEventListener('input', (e) => {
+    const input = e.target as HTMLInputElement;
+    if (input.getAttribute('aria-invalid') === 'true' && (input.name === 'nombre' || input.name === 'ciudad')) {
+      validar(input.name, input.value);
+    }
+  });
 
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -140,18 +255,96 @@ const whatsappListo = numeroValido(numeroWhatsApp);
 </script>
 
 <style>
-  .lineas { list-style: none; padding: 0; display: grid; gap: .75rem; }
+  .cabecera { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem 2rem; padding-block: clamp(2rem, 6vw, 3.5rem) 2rem; }
+  .cabecera h1 { margin: 0; font-size: clamp(2.4rem, 6vw, 3.8rem); }
+  .pasos { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; list-style: none; padding: 0; margin: 0; font-size: 0.88rem; color: var(--cafe-medio); }
+  .pasos li { display: flex; align-items: center; gap: 0.45rem; }
+  .paso-n { width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; font-size: 0.78rem; font-weight: 700; border: 1.5px solid currentColor; }
+  .pasos li[aria-current='step'] { color: var(--cafe); font-weight: 600; }
+  .pasos li[aria-current='step'] .paso-n { background: var(--terracota); border-color: var(--terracota); color: var(--blanco); }
+
+  /* ---------- vacío ---------- */
+  .vacio { text-align: center; padding-block: 2rem 1rem; }
+  .vacio > img { width: 140px; margin: 0 auto 1.5rem; border-radius: 20px; }
+  .vacio > p { color: var(--cafe-medio); }
+  .sugeridas { margin-top: 4rem; text-align: left; }
+  .sugeridas h3 { font-size: 1.6rem; margin-bottom: 1.5rem; }
+
+  /* ---------- con productos ---------- */
+  .disposicion { display: grid; gap: 2.5rem; grid-template-columns: 1fr; align-items: start; }
+  @media (min-width: 960px) { .disposicion { grid-template-columns: 1fr 380px; } }
+  .productos-cabecera { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 0.5rem; font-size: 0.92rem; }
+  .productos-cabecera p { margin: 0; color: var(--cafe-medio); }
+  .productos-cabecera a { font-weight: 600; text-decoration: none; }
+  .productos-cabecera a:hover { text-decoration: underline; }
+
+  .lineas { list-style: none; padding: 0; margin: 0; border-top: 1px solid rgb(46 33 23 / 0.15); }
   .lineas :global(.linea) {
-    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; align-items: center;
-    background: var(--blanco); border-radius: var(--radio); padding: 1rem;
+    display: grid; align-items: center; gap: 0.5rem 1.25rem;
+    grid-template-columns: 88px 1fr auto auto;
+    padding: 1.25rem 0; border-bottom: 1px solid rgb(46 33 23 / 0.15);
   }
-  .lineas :global(.linea-nombre) { margin: 0; font-weight: 600; }
-  .lineas :global(.linea-detalle) { margin: 0; color: var(--cafe-medio); font-size: .9rem; }
-  .lineas :global(.linea-acciones) { display: flex; gap: .75rem; align-items: center; }
-  .lineas :global(.linea-acciones input) { width: 5rem; }
-  .total { font-size: 1.2rem; font-weight: 600; }
-  .nota { color: var(--cafe-medio); }
-  .finalizar { display: grid; gap: 1rem; max-width: 420px; margin-top: 2rem; }
-  .error { color: var(--error); margin: .25rem 0 0; font-size: .9rem; }
+  .lineas :global(.linea-foto) {
+    width: 88px; aspect-ratio: 4 / 5; border-radius: 10px; overflow: hidden; background: var(--arena);
+  }
+  .lineas :global(.linea-foto img) { width: 100%; height: 100%; object-fit: cover; }
+  .lineas :global(.linea-nombre) { font-family: var(--titulo); font-size: 1.3rem; text-decoration: none; line-height: 1.2; }
+  .lineas :global(.linea-nombre:hover) { text-decoration: underline; }
+  .lineas :global(.linea-detalle) { margin: 0.3rem 0 0; color: var(--cafe-medio); font-size: 0.88rem; }
+  .lineas :global(.linea-unica) { font-size: 0.88rem; color: var(--cafe-medio); }
+  .lineas :global(.selector) {
+    display: inline-flex; align-items: center; border: 1.5px solid rgb(46 33 23 / 0.25); border-radius: 999px; background: var(--blanco);
+  }
+  .lineas :global(.selector-boton) {
+    font: inherit; font-size: 1.15rem; width: 2.4rem; height: 2.4rem; border: 0; background: none; color: var(--cafe); cursor: pointer; border-radius: 50%;
+  }
+  .lineas :global(.selector-boton:hover:not(:disabled)) { background: var(--arena); }
+  .lineas :global(.selector-boton:disabled) { opacity: 0.35; cursor: not-allowed; }
+  .lineas :global(.selector-valor) { min-width: 1.8rem; text-align: center; font-weight: 600; }
+  .lineas :global(.linea-lado) { display: flex; flex-direction: column; align-items: flex-end; gap: 0.3rem; text-align: right; }
+  .lineas :global(.linea-precio) { font-weight: 600; }
+  .lineas :global(.quitar) {
+    font: inherit; font-size: 0.85rem; background: none; border: 0; padding: 0.2rem;
+    color: var(--cafe-medio); text-decoration: underline; cursor: pointer;
+  }
+  .lineas :global(.quitar:hover) { color: var(--terracota-oscuro); }
+  @media (max-width: 600px) {
+    /* Foto | info y, debajo, cantidad | precio */
+    .lineas :global(.linea) { grid-template-columns: 76px 1fr; grid-template-areas: 'foto info' 'foto acciones' 'foto lado'; }
+    .lineas :global(.linea-foto) { grid-area: foto; width: 76px; align-self: start; }
+    .lineas :global(.linea-info) { grid-area: info; }
+    .lineas :global(.linea-acciones) { grid-area: acciones; }
+    .lineas :global(.linea-lado) { grid-area: lado; flex-direction: row; justify-content: space-between; align-items: center; }
+  }
+
+  /* ---------- resumen ---------- */
+  .resumen { background: var(--blanco); border-radius: var(--radio); padding: 1.75rem; box-shadow: var(--sombra); }
+  @media (min-width: 960px) { .resumen { position: sticky; top: calc(var(--alto-encabezado) + 1.5rem); } }
+  .resumen h2 { font-size: 1.6rem; }
+  .cuentas { margin: 0 0 1rem; display: grid; gap: 0.6rem; }
+  .cuentas div { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.95rem; }
+  .cuentas dt { color: var(--cafe-medio); }
+  .cuentas dd { margin: 0; font-weight: 500; text-align: right; }
+  .total { font-weight: 600; padding-top: 1rem; border-top: 1px solid rgb(46 33 23 / 0.15); }
+  .finalizar { display: grid; gap: 1rem; margin-top: 1.25rem; }
+  .boton-ancho { width: 100%; padding-block: 1rem; }
+  .error { color: var(--terracota-oscuro); margin: 0.3rem 0 0; font-size: 0.9rem; font-weight: 500; }
   .error:empty { display: none; }
+  .confianza { list-style: none; padding: 1.25rem 0 0; margin: 1.25rem 0 0; border-top: 1px solid rgb(46 33 23 / 0.15); display: grid; gap: 0.5rem; font-size: 0.88rem; color: var(--cafe-medio); }
+  .confianza span { color: var(--terracota); margin-right: 0.35rem; }
+
+  /* ---------- barra fija en celular ---------- */
+  .barra-movil {
+    position: fixed; inset-inline: 0; bottom: 0; z-index: 55;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 0.75rem var(--margen); background: rgb(255 250 242 / 0.96); backdrop-filter: blur(8px);
+    box-shadow: 0 -8px 24px -12px rgb(46 33 23 / 0.3);
+  }
+  .barra-movil[hidden] { display: none; }
+  .barra-movil p { margin: 0; font-size: 0.9rem; font-weight: 500; }
+  @media (min-width: 960px) { .barra-movil { display: none !important; } }
+  @media (max-width: 959px) {
+    :global(.whatsapp-flotante) { display: none !important; }
+    :global(.pie) { padding-bottom: 4.5rem; }
+  }
 </style>

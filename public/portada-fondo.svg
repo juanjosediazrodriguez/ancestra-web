@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <!-- Fondo de portada de Ancestra, todo en tonos de terracota (sin saltos bruscos de color):
+       cielo en degradado suave, sol del logo en líneas finas y la Sierra Nevada en capas.
+       Más oscuro a la izquierda, donde va el texto. Decorativo (alt="" en el sitio). -->
+  <defs>
+    <linearGradient id="cielo" x1="0" y1="0" x2="1" y2="0.4">
+      <stop offset="0" stop-color="#5e2716"/>
+      <stop offset="0.55" stop-color="#8a3a20"/>
+      <stop offset="1" stop-color="#b0573a"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="1420" cy="440" r="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d98a62" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#d98a62" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a4529"/><stop offset="1" stop-color="#7f3820"/></linearGradient>
+    <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a341d"/><stop offset="1" stop-color="#652b18"/></linearGradient>
+    <linearGradient id="m3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5c2715"/><stop offset="1" stop-color="#4a2011"/></linearGradient>
+    <pattern id="zz" width="56" height="28" patternUnits="userSpaceOnUse">
+      <path d="M0 22 L14 6 L28 22 L42 6 L56 22" fill="none" stroke="#c46f4c" stroke-width="3" stroke-linejoin="round" opacity=".7"/>
+    </pattern>
+    <filter id="grano" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .08 0"/>
+    </filter>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#cielo)"/>
+  <rect width="1920" height="1080" fill="url(#halo)"/>
+
+  <!-- Sol del logo, en líneas finas y del mismo tono, más claro -->
+  <g transform="translate(1420 440)" fill="none" stroke="#e3a07d" stroke-linecap="round">
+    <g stroke-width="5" opacity=".75">
+      <path d="M0 -310 V-240 M0 240 V310 M-310 0 H-240 M240 0 H310 M-219 -219 L-170 -170 M170 170 L219 219 M-219 219 L-170 170 M170 -170 L219 -219"/>
+    </g>
+    <g stroke-width="3" opacity=".5">
+      <path d="M-119 -286 L-92 -222 M92 222 L119 286 M-286 119 L-222 92 M222 -92 L286 -119 M119 -286 L92 -222 M-92 222 L-119 286 M-286 -119 L-222 -92 M222 92 L286 119"/>
+    </g>
+    <circle r="200" stroke-width="4" opacity=".8"/>
+    <circle r="200" stroke-width="2" stroke-dasharray="4 12" opacity=".6" transform="scale(.86)"/>
+    <circle r="120" stroke-width="3" opacity=".6"/>
+    <circle r="56" fill="#d98a62" stroke="none" opacity=".55"/>
+  </g>
+
+  <!-- Sierra Nevada: tres capas que oscurecen hacia abajo, todas terracota -->
+  <path d="M0 720 L180 610 L330 665 L520 480 L700 615 L860 530 L1040 645 L1240 445 L1400 565 L1560 480 L1760 605 L1920 530 V1080 H0 Z" fill="url(#m1)"/>
+  <path d="M1240 445 L1210 476 L1228 472 L1240 484 L1255 470 L1272 476 Z M520 480 L493 506 L510 503 L522 513 L535 501 L550 508 Z" fill="#d98a62" opacity=".5"/>
+  <path d="M0 805 L240 705 L420 765 L640 655 L820 745 L1020 685 L1220 775 L1420 665 L1640 765 L1920 690 V1080 H0 Z" fill="url(#m2)"/>
+  <path d="M0 890 L300 820 L560 870 L820 810 L1100 880 L1380 825 L1660 880 L1920 830 V1080 H0 Z" fill="url(#m3)"/>
+
+  <!-- Zigzag tejido, sutil, sobre la última capa -->
+  <rect y="985" width="1920" height="28" fill="url(#zz)"/>
+
+  <rect width="1920" height="1080" filter="url(#grano)"/>
+</svg>

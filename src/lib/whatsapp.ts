@@ -62,6 +62,11 @@ export function linkPedido(numero: string, items: ItemCarrito[], cliente: DatosC
   return `https://wa.me/${numero}?text=${encodeURIComponent(mensajePedido(items, cliente, origen))}`;
 }
 
+/** Link del botón flotante: abre el chat con un saludo. */
+export function linkContacto(numero: string): string {
+  return `https://wa.me/${numero}?text=${encodeURIComponent('Hola Ancestra, quisiera más información sobre las mochilas.')}`;
+}
+
 /** Link para preguntar por una mochila vendida o agotada. */
 export function linkConsulta(numero: string, nombre: string, referencia: string): string {
   const texto = `Hola Ancestra, vi la mochila ${nombre} (ref. ${referencia}) y quisiera saber si tienen una similar.`;

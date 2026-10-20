@@ -1,0 +1,31 @@
+---
+/**
+ * Borde decorativo con el zigzag de las mochilas. Es solo decoración: aria-hidden.
+ * `color` define el color del patrón (usa currentColor).
+ */
+interface Props {
+  color?: string;
+  fondo?: string;
+  invertido?: boolean;
+}
+const { color = 'var(--terracota)', fondo = 'transparent', invertido = false } = Astro.props;
+// ID único por instancia: con IDs repetidos, todos los patrones tomarían el color del primero.
+const id = `zigzag-${Math.random().toString(36).slice(2, 9)}`;
+---
+
+<div class="patron" aria-hidden="true" style={`--color-patron:${color};--fondo-patron:${fondo}`} data-invertido={invertido}>
+  <svg width="100%" height="18" preserveAspectRatio="none">
+    <defs>
+      <pattern id={id} width="36" height="18" patternUnits="userSpaceOnUse">
+        <path d="M0 14 L9 4 L18 14 L27 4 L36 14" fill="none" stroke="currentColor" stroke-width="2.5" />
+        <rect x="16" y="15" width="4" height="3" fill="currentColor" />
+      </pattern>
+    </defs>
+    <rect width="100%" height="18" fill={`url(#${id})`} />
+  </svg>
+</div>
+
+<style>
+  .patron { color: var(--color-patron); background: var(--fondo-patron); line-height: 0; padding: 0.5rem 0; }
+  .patron[data-invertido='true'] svg { transform: scaleY(-1); }
+</style>

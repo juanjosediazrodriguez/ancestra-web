@@ -1,95 +1,141 @@
-/* Paleta tomada del Instagram de Ancestra: crema, café y dorado.
-   Contraste del texto ≥ 6:1 (WCAG AA pide 4.5:1). El dorado solo se usa en bordes y foco (3.8:1, mínimo 3:1). */
+/*
+ * Ancestra · sistema visual
+ * Tipografía: Fraunces (títulos) + DM Sans (texto), alojadas en el sitio con @fontsource.
+ * Paleta tomada de sus fotos: crema, arena, café, terracota y oliva.
+ * Contraste verificado: todo texto ≥ 5.1:1 sobre su fondo (WCAG AA pide 4.5:1).
+ */
 :root {
-  --crema: #f7f1e6;
-  --crema-oscuro: #ece2cf;
-  --cafe: #3b2a1a;
+  --crema: #f5ede0;
+  --arena: #e8dcc6;
+  --blanco: #fffaf2;
+  --cafe: #2e2117;
   --cafe-medio: #6b4a2b;
-  --dorado: #9a7413; /* solo bordes y foco, no texto */
-  --blanco: #fffdf8;
-  --error: #8a2c1f;
-  --serif: Georgia, 'Times New Roman', serif;
-  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --radio: 10px;
-  --ancho: 1100px;
+  --terracota: #a3482a;
+  --terracota-oscuro: #8c3b21;
+  --oliva: #4f5a2e;
+
+  --titulo: 'Fraunces Variable', Georgia, serif;
+  --texto: 'DM Sans Variable', system-ui, sans-serif;
+
+  --radio: 14px;
+  --ancho: 1200px;
+  --margen: clamp(1rem, 4vw, 2.5rem);
+  --sombra: 0 1px 2px rgb(46 33 23 / 0.06), 0 12px 32px -12px rgb(46 33 23 / 0.25);
+  --alto-encabezado: 4.25rem;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
 
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
 body {
   margin: 0;
-  font-family: var(--sans);
+  font-family: var(--texto);
+  font-size: 1.0625rem;
+  line-height: 1.65;
   color: var(--cafe);
   background: var(--crema);
-  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3 { font-family: var(--serif); font-weight: normal; line-height: 1.2; }
-img { max-width: 100%; height: auto; display: block; }
-a { color: var(--cafe-medio); }
+/* Grano suave tipo papel, por encima de todo pero sin bloquear clics */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 
-:focus-visible { outline: 3px solid var(--dorado); outline-offset: 2px; }
+h1, h2, h3 {
+  font-family: var(--titulo);
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.5em;
+  text-wrap: balance;
+}
+h1 { font-size: clamp(2.6rem, 7vw, 5rem); }
+h2 { font-size: clamp(2rem, 4.5vw, 3.25rem); }
+h3 { font-size: 1.35rem; }
+p { margin: 0 0 1em; text-wrap: pretty; }
+
+img { max-width: 100%; height: auto; display: block; }
+a { color: inherit; text-underline-offset: 0.2em; }
+:focus-visible { outline: 3px solid var(--terracota); outline-offset: 3px; border-radius: 4px; }
+
+/* ---------- utilidades ---------- */
+.contenedor { width: min(100% - 2 * var(--margen), var(--ancho)); margin-inline: auto; }
+
+.sobretitulo {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--terracota);
+  margin-bottom: 0.75rem;
+}
 
 .saltar {
-  position: absolute; left: -9999px; top: 0;
-  background: var(--cafe); color: var(--blanco); padding: .5rem 1rem;
+  position: absolute; left: -9999px; top: 0; z-index: 200;
+  background: var(--cafe); color: var(--blanco); padding: 0.6rem 1rem;
 }
-.saltar:focus { left: 0; z-index: 10; }
-
-.aviso-muestra {
-  margin: 0; padding: .4rem 1rem; text-align: center; font-size: .9rem;
-  background: var(--cafe); color: var(--blanco);
-}
-
-.encabezado {
-  display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;
-  max-width: var(--ancho); margin: 0 auto; padding: 1rem;
-}
-.marca { text-decoration: none; color: var(--cafe); display: flex; flex-direction: column; }
-.marca-nombre { font-family: var(--serif); font-size: 1.8rem; letter-spacing: .15em; text-transform: uppercase; }
-.marca-lema { font-size: .8rem; letter-spacing: .1em; color: var(--cafe-medio); }
-.encabezado ul { display: flex; gap: 1.25rem; list-style: none; margin: 0; padding: 0; }
-.encabezado nav a { text-decoration: none; padding: .25rem 0; }
-.encabezado nav a[aria-current='page'] { border-bottom: 2px solid var(--dorado); }
-.contador {
-  display: inline-block; min-width: 1.5em; padding: 0 .4em; border-radius: 999px;
-  background: var(--cafe); color: var(--blanco); font-size: .8rem; text-align: center;
-}
-
-main { max-width: var(--ancho); margin: 0 auto; padding: 1rem; min-height: 60vh; }
-
-.pie { text-align: center; padding: 2rem 1rem; background: var(--crema-oscuro); margin-top: 3rem; }
-.pie-legal { font-size: .85rem; }
-
-.boton {
-  display: inline-block; border: 0; border-radius: var(--radio); cursor: pointer;
-  background: var(--cafe); color: var(--blanco); padding: .8rem 1.4rem;
-  font: inherit; text-decoration: none; text-align: center;
-}
-.boton:hover { background: var(--cafe-medio); }
-.boton[disabled], .boton[aria-disabled='true'] { opacity: .55; cursor: not-allowed; }
-.boton-secundario { background: transparent; color: var(--cafe); border: 2px solid var(--cafe); }
-.boton-secundario:hover { background: var(--crema-oscuro); }
-
-.rejilla {
-  display: grid; gap: 1.5rem;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
-  list-style: none; padding: 0;
-}
-
-.etiqueta {
-  display: inline-block; font-size: .8rem; padding: .1rem .6rem; border-radius: 999px;
-  background: var(--crema-oscuro); color: var(--cafe);
-}
-.etiqueta-vendida { background: var(--cafe); color: var(--blanco); }
-
-label { display: block; font-weight: 600; margin-bottom: .25rem; }
-input, select {
-  font: inherit; padding: .6rem .7rem; border: 1px solid var(--cafe-medio); border-radius: 6px;
-  background: var(--blanco); color: var(--cafe); width: 100%;
-}
+.saltar:focus { left: 0; }
 
 .visualmente-oculto {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- botones ---------- */
+.boton {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  border: 2px solid transparent; border-radius: 999px; cursor: pointer;
+  background: var(--terracota); color: var(--blanco);
+  padding: 0.85rem 1.6rem; font: inherit; font-weight: 600; font-size: 1rem;
+  text-decoration: none; text-align: center;
+  transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.boton:hover { background: var(--terracota-oscuro); transform: translateY(-1px); box-shadow: var(--sombra); }
+.boton[disabled], .boton[aria-disabled='true'] { opacity: 0.55; cursor: not-allowed; transform: none; }
+.boton-oscuro { background: var(--cafe); }
+.boton-oscuro:hover { background: #45321f; }
+.boton-contorno { background: transparent; color: currentColor; border-color: currentColor; }
+.boton-contorno:hover { background: rgb(46 33 23 / 0.06); }
+.boton-claro { background: var(--blanco); color: var(--cafe); }
+.boton-claro:hover { background: var(--crema); }
+
+/* ---------- etiquetas ---------- */
+.etiqueta {
+  display: inline-block; font-size: 0.78rem; font-weight: 500;
+  padding: 0.2rem 0.75rem; border-radius: 999px;
+  background: var(--arena); color: var(--cafe);
+}
+
+/* ---------- formularios ---------- */
+label { display: block; font-weight: 600; font-size: 0.95rem; margin-bottom: 0.35rem; }
+input, select {
+  font: inherit; width: 100%;
+  padding: 0.75rem 0.9rem; border: 1.5px solid rgb(46 33 23 / 0.25); border-radius: 10px;
+  background: var(--blanco); color: var(--cafe);
+  transition: border-color 0.2s;
+}
+input:hover, select:hover { border-color: rgb(46 33 23 / 0.45); }
+input[aria-invalid='true'] { border-color: var(--terracota-oscuro); }
+
+/* ---------- rejilla de productos ---------- */
+.rejilla {
+  display: grid; gap: clamp(1rem, 2.5vw, 2rem);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr));
+  list-style: none; padding: 0; margin: 0;
+}
+
+/* ---------- aparición al bajar (solo con JS y sin "reducir movimiento") ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .js [data-revelar] { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .js [data-revelar].visible { opacity: 1; transform: none; }
 }

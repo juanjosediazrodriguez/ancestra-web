@@ -1,58 +1,197 @@
 ---
 import Base from '../layouts/Base.astro';
+import Patron from '../components/Patron.astro';
 import TarjetaMochila from '../components/TarjetaMochila.astro';
 import { obtenerMochilas } from '../lib/catalogo';
-import { COMUNIDADES, NOMBRE_COMUNIDAD } from '../lib/tipos';
+import { COMUNIDADES, NOMBRE_COMUNIDAD, type Comunidad } from '../lib/tipos';
 
 const mochilas = await obtenerMochilas();
-const recientes = mochilas.filter((m) => m.disponible).slice(0, 4);
+const disponibles = mochilas.filter((m) => m.disponible);
+const recientes = disponibles.slice(0, 4);
 
-const ORIGEN: Record<(typeof COMUNIDADES)[number], string> = {
-  wayuu: 'La Guajira',
-  arhuaca: 'Sierra Nevada de Santa Marta',
-  kankuama: 'Sierra Nevada de Santa Marta',
+const COMUNIDAD_INFO: Record<Comunidad, { region: string; texto: string }> = {
+  wayuu: { region: 'La Guajira', texto: 'Colores vivos y borlas, tejidas en crochet con la paciencia de semanas.' },
+  arhuaca: { region: 'Sierra Nevada de Santa Marta', texto: 'Lana en tonos tierra y figuras que cuentan la relación con la montaña.' },
+  kankuama: { region: 'Sierra Nevada de Santa Marta', texto: 'Fique natural, tejido a mano con la tradición de Atánquez.' },
 };
+
+const pasos = [
+  { n: '01', titulo: 'Elige', texto: 'Arma tu carrito con las mochilas que te gusten. Las piezas únicas son exactamente las de la foto.' },
+  { n: '02', titulo: 'Escríbenos', texto: 'Al finalizar se abre WhatsApp con tu pedido escrito. Confirmamos disponibilidad, envío y pago.' },
+  { n: '03', titulo: 'Recíbela', texto: 'La enviamos por Servientrega a toda Colombia, y también a México.' },
+];
 ---
 
 <Base titulo="Inicio">
   <section class="portada">
-    <h1>Cada puntada guarda una memoria</h1>
-    <p>Mochilas hechas a mano por artesanos wayuu, arhuacos y kankuamos. Envíos a toda Colombia y a México.</p>
-    <a class="boton" href="/catalogo">Ver el catálogo</a>
+    <!-- Fondo ilustrado provisional: se puede reemplazar por una foto horizontal de ≥1600 px -->
+    <img class="portada-fondo" src="/portada-fondo.svg" alt="" width="1920" height="1080" fetchpriority="high" />
+    <div class="portada-texto contenedor">
+      <span class="sobretitulo">Hecho a mano en Colombia</span>
+      <h1>Cada puntada guarda una memoria</h1>
+      <p>Mochilas tejidas por artesanos wayuu, arhuacos y kankuamos. No hay dos iguales.</p>
+      <div class="portada-acciones">
+        <a class="boton boton-claro" href="/catalogo">Ver el catálogo</a>
+        <a class="boton boton-contorno" href="#como-comprar">Cómo comprar</a>
+      </div>
+    </div>
   </section>
 
+  <div class="franja" aria-label="Lo que nos caracteriza">
+    <ul class="contenedor">
+      <li>Tejidas a mano</li>
+      <li aria-hidden="true">✦</li>
+      <li>Piezas únicas</li>
+      <li aria-hidden="true">✦</li>
+      <li>Envíos a Colombia y México</li>
+    </ul>
+  </div>
+
   {recientes.length > 0 && (
-    <section aria-labelledby="titulo-recientes">
-      <h2 id="titulo-recientes">Recién llegadas</h2>
+    <section class="seccion contenedor" aria-labelledby="titulo-recientes" data-revelar>
+      <div class="seccion-cabecera">
+        <div>
+          <span class="sobretitulo">Nuevas en la tienda</span>
+          <h2 id="titulo-recientes">Recién llegadas</h2>
+        </div>
+        <a class="ver-todo" href="/catalogo">Ver todo el catálogo →</a>
+      </div>
       <ul class="rejilla">
         {recientes.map((m) => <li><TarjetaMochila mochila={m} /></li>)}
       </ul>
     </section>
   )}
 
-  <section aria-labelledby="titulo-comunidades">
-    <h2 id="titulo-comunidades">Nuestras comunidades</h2>
-    <ul class="comunidades">
-      {COMUNIDADES.map((c) => (
+  <section class="comunidades" aria-labelledby="titulo-comunidades">
+    <Patron color="var(--crema)" fondo="var(--terracota)" />
+    <div class="contenedor comunidades-interior" data-revelar>
+      <span class="sobretitulo">De dónde vienen</span>
+      <h2 id="titulo-comunidades">Tres comunidades, tres formas de tejer</h2>
+      <ul class="comunidades-lista">
+        {COMUNIDADES.map((c) => (
+          <li>
+            <a href={`/catalogo?comunidad=${c}`} class="comunidad">
+              {/* Marco decorativo con el sol del logo (sin foto: las tres comunidades se ven iguales) */}
+              <div class="arco" aria-hidden="true">
+                <svg class="arco-sol" viewBox="-40 -40 80 80">
+                  <g stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <path d="M0 -36v9M0 27v9M-36 0h9M27 0h9M-25 -25l6 6M19 19l6 6M-25 25l6 -6M19 -19l6 -6" />
+                  </g>
+                  <circle r="14" fill="currentColor" />
+                </svg>
+              </div>
+              <span class="comunidad-region">{COMUNIDAD_INFO[c].region}</span>
+              <h3>{NOMBRE_COMUNIDAD[c]}</h3>
+              <p>{COMUNIDAD_INFO[c].texto}</p>
+              <span class="comunidad-enlace">Ver mochilas {NOMBRE_COMUNIDAD[c].toLowerCase()}s <span aria-hidden="true">→</span></span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+    <Patron color="var(--crema)" fondo="var(--terracota)" invertido />
+  </section>
+
+  <section class="seccion contenedor como-comprar" id="como-comprar" aria-labelledby="titulo-comprar" data-revelar>
+    <span class="sobretitulo">Sin complicaciones</span>
+    <h2 id="titulo-comprar">Cómo comprar</h2>
+    <ol class="pasos">
+      {pasos.map((p) => (
         <li>
-          <a href={`/catalogo?comunidad=${c}`}>
-            <span class="comunidad-nombre">{NOMBRE_COMUNIDAD[c]}</span>
-            <span>{ORIGEN[c]}</span>
-          </a>
+          <span class="paso-numero" aria-hidden="true">{p.n}</span>
+          <h3>{p.titulo}</h3>
+          <p>{p.texto}</p>
         </li>
       ))}
-    </ul>
+    </ol>
+    <a class="boton boton-oscuro" href="/catalogo">Empezar a elegir</a>
   </section>
 </Base>
 
 <style>
-  .portada { text-align: center; padding: 3rem 1rem; }
-  .portada h1 { font-size: clamp(2rem, 5vw, 3.2rem); margin-bottom: .5rem; }
-  .portada p { max-width: 40ch; margin: 0 auto 1.5rem; }
-  .comunidades { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); list-style: none; padding: 0; }
-  .comunidades a {
-    display: flex; flex-direction: column; padding: 1.5rem; border-radius: var(--radio);
-    background: var(--blanco); text-decoration: none; color: var(--cafe);
+  /* ---------- portada ---------- */
+  .portada {
+    position: relative; isolation: isolate; overflow: hidden;
+    min-height: min(84vh, 780px);
+    display: flex; align-items: center;
+    padding-block: clamp(4rem, 9vw, 6rem) clamp(7rem, 14vw, 10rem);
+    background: var(--cafe); color: var(--blanco);
   }
-  .comunidad-nombre { font-family: var(--serif); font-size: 1.5rem; }
+  .portada-fondo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% center; z-index: -2; }
+  /* Refuerza el contraste del texto en pantallas angostas, donde el sol queda detrás */
+  .portada::before {
+    content: ''; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(90deg, rgb(74 32 17 / 0.55) 0%, rgb(74 32 17 / 0.2) 55%, rgb(74 32 17 / 0) 100%);
+  }
+  .portada .sobretitulo { color: var(--blanco); opacity: 1; }
+  @media (max-width: 700px) {
+    /* En celular el texto ocupa todo el ancho: velo terracota oscuro parejo para mantener el contraste */
+    .portada::before { background: rgb(74 32 17 / 0.45); }
+    .portada-fondo { object-position: 78% center; }
+  }
+  .portada-texto { max-width: 44rem; margin-inline: max(var(--margen), calc((100% - var(--ancho)) / 2)); }
+  .portada-texto h1 { text-shadow: 0 2px 24px rgb(46 33 23 / 0.35); }
+  .portada-texto p { font-size: clamp(1.05rem, 2vw, 1.3rem); max-width: 34ch; }
+  .portada-acciones { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
+  .portada .boton-contorno { color: var(--blanco); }
+  .portada .boton-contorno:hover { background: rgb(255 250 242 / 0.12); }
+
+  /* ---------- franja ---------- */
+  .franja { background: var(--cafe); color: var(--arena); }
+  .franja ul {
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem 1.5rem;
+    list-style: none; margin-block: 0; padding-block: 1rem;
+    font-size: 0.8rem; letter-spacing: 0.2em; text-transform: uppercase;
+  }
+  @media (max-width: 600px) {
+    .franja ul { flex-direction: column; align-items: center; gap: 0.35rem; font-size: 0.72rem; }
+    .franja li[aria-hidden='true'] { display: none; }
+  }
+
+  /* ---------- secciones ---------- */
+  .seccion { padding-block: clamp(4rem, 9vw, 7rem); }
+  .seccion-cabecera { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 2.5rem; }
+  .seccion-cabecera h2 { margin: 0; }
+  .ver-todo { font-weight: 600; text-decoration: none; border-bottom: 1.5px solid currentColor; padding-bottom: 0.15rem; }
+
+  /* ---------- comunidades ---------- */
+  .comunidades { background: var(--terracota); color: var(--blanco); }
+  .comunidades .sobretitulo { color: var(--arena); }
+  .comunidades-interior { text-align: center; }
+  .comunidades-interior { padding-block: clamp(3.5rem, 8vw, 6rem); }
+  .comunidades-lista {
+    display: grid; gap: clamp(2.5rem, 5vw, 3.5rem) clamp(1.5rem, 4vw, 3rem); list-style: none; padding: 0; margin: 3rem 0 0;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  }
+  /* Sin tarjetas: cada comunidad es una columna libre sobre el terracota */
+  .comunidad { display: flex; flex-direction: column; align-items: center; height: 100%; text-align: center; text-decoration: none; }
+  /* Marco en arco, como una puerta colonial, con el sol del logo */
+  .arco {
+    position: relative; width: min(100%, 220px); aspect-ratio: 4 / 5; margin-bottom: 1.5rem;
+    border-radius: 999px 999px 18px 18px; overflow: hidden;
+    background: var(--arena); color: var(--terracota);
+    box-shadow: 0 0 0 6px rgb(255 250 242 / 0.12), 0 24px 40px -24px rgb(46 33 23 / 0.6);
+    transition: transform 0.4s, box-shadow 0.4s;
+  }
+  .arco-sol { position: absolute; inset: 30% 25%; width: 50%; height: 40%; opacity: 0.85; }
+  @media (prefers-reduced-motion: no-preference) {
+    .comunidad:hover .arco { transform: translateY(-6px); box-shadow: 0 0 0 6px rgb(255 250 242 / 0.22), 0 30px 48px -24px rgb(46 33 23 / 0.7); }
+  }
+  .comunidad-region { font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--arena); }
+  .comunidad h3 { font-size: clamp(2rem, 4vw, 2.6rem); margin: 0.35rem 0 0.6rem; }
+  .comunidad p { max-width: 30ch; opacity: 0.92; flex: 1; }
+  .comunidad-enlace { font-weight: 600; border-bottom: 1.5px solid rgb(255 250 242 / 0.5); padding-bottom: 0.15rem; transition: border-color 0.2s; }
+  .comunidad:hover .comunidad-enlace { border-color: var(--blanco); }
+
+  /* ---------- cómo comprar ---------- */
+  .como-comprar { text-align: center; }
+  .pasos {
+    list-style: none; padding: 0; margin: 3rem 0;
+    display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    text-align: left;
+  }
+  .pasos li { background: var(--blanco); border-radius: var(--radio); padding: 2rem 1.75rem; box-shadow: var(--sombra); }
+  .paso-numero { font-family: var(--titulo); font-size: 3rem; line-height: 1; color: var(--oliva); display: block; margin-bottom: 1rem; }
+  .pasos h3 { font-size: 1.6rem; }
+  .pasos p { margin: 0; color: var(--cafe-medio); }
 </style>
