@@ -131,7 +131,7 @@ const whatsappListo = numeroValido(numeroWhatsApp);
     const carrito = leerCarrito();
     if (carrito.length === 0) return;
     // El carrito no se vacía aquí: la venta se confirma en el chat, y si la clienta vuelve, sigue ahí.
-    window.location.href = linkPedido(form.dataset.numero ?? '', carrito, cliente);
+    window.location.href = linkPedido(form.dataset.numero ?? '', carrito, cliente, window.location.origin);
   });
 
   window.addEventListener('ancestra:carrito-cambio', pintar);

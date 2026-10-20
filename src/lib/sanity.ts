@@ -52,10 +52,14 @@ interface MochilaCruda extends Omit<Mochila, 'fotos' | 'comunidad'> {
 }
 
 function aFoto(f: FotoCruda, nombre: string): Foto {
-  const base = imagenes!.image(f as SanityImageSource).auto('format').fit('max');
+  const imagen = () => imagenes!.image(f as SanityImageSource);
+  const base = imagen().auto('format').fit('max');
   return {
     url: base.width(1200).url(),
     miniatura: base.width(600).url(),
+    // JPG fijo (no auto): el lector de vistas previas de WhatsApp no siempre acepta WebP/AVIF.
+    // fit('crop') respeta el punto de interés (hotspot) que marquen en el Studio.
+    social: imagen().width(1200).height(630).fit('crop').format('jpg').quality(80).url(),
     alt: f.alt || nombre,
     ancho: f.ancho,
     alto: f.alto,

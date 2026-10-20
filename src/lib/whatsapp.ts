@@ -20,12 +20,18 @@ export function textoTotal(items: ItemCarrito[]): string {
   return `Total de lo que tiene precio: ${cop.format(totalConocido(items))} (hay precios por confirmar) + envío`;
 }
 
-/** Arma el texto del pedido que llega al WhatsApp de Ancestra. */
-export function mensajePedido(items: ItemCarrito[], cliente: DatosCliente): string {
+/**
+ * Arma el texto del pedido que llega al WhatsApp de Ancestra.
+ * Si se pasa `origen` (ej. https://ancestra.com.co), agrega el link de cada mochila: WhatsApp muestra
+ * la vista previa con foto del primer link (sale de las etiquetas Open Graph de la ficha).
+ */
+export function mensajePedido(items: ItemCarrito[], cliente: DatosCliente, origen?: string): string {
+  const base = origenValido(origen);
   const lineas = items.map((i) => {
     const color = i.color ? ` – color ${i.color}` : '';
     const precio = i.precio === null ? 'precio a consultar' : cop.format(i.precio * i.cantidad);
-    return `• ${i.nombre} (ref. ${i.referencia})${color} x${i.cantidad}: ${precio}`;
+    const linea = `• ${i.nombre} (ref. ${i.referencia})${color} x${i.cantidad}: ${precio}`;
+    return base ? `${linea}\n  ${base}/mochila/${encodeURIComponent(i.slug)}` : linea;
   });
 
   return [
@@ -35,14 +41,25 @@ export function mensajePedido(items: ItemCarrito[], cliente: DatosCliente): stri
   ].join('\n');
 }
 
+/** Devuelve el origen sin "/" final si es http(s); si no, `null` (y el mensaje sale sin links). */
+function origenValido(origen?: string): string | null {
+  if (!origen) return null;
+  try {
+    const url = new URL(origen);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Link que abre el chat con el mensaje ya escrito.
  * encodeURIComponent evita que tildes, saltos de línea, "&" o "#" rompan la URL.
  */
-export function linkPedido(numero: string, items: ItemCarrito[], cliente: DatosCliente): string {
+export function linkPedido(numero: string, items: ItemCarrito[], cliente: DatosCliente, origen?: string): string {
   if (!numeroValido(numero)) throw new Error('Número de WhatsApp inválido: deben ser 10 a 15 dígitos, sin "+".');
   if (items.length === 0) throw new Error('El carrito está vacío.');
-  return `https://wa.me/${numero}?text=${encodeURIComponent(mensajePedido(items, cliente))}`;
+  return `https://wa.me/${numero}?text=${encodeURIComponent(mensajePedido(items, cliente, origen))}`;
 }
 
 /** Link para preguntar por una mochila vendida o agotada. */

@@ -20,7 +20,11 @@ const esUnica = mochila.tipo === 'unica';
 const whatsappListo = numeroValido(numeroWhatsApp);
 ---
 
-<Base titulo={mochila.nombre} descripcion={mochila.descripcion || `Mochila ${NOMBRE_COMUNIDAD[mochila.comunidad]} hecha a mano.`}>
+<Base
+  titulo={mochila.nombre}
+  descripcion={mochila.descripcion || `Mochila ${NOMBRE_COMUNIDAD[mochila.comunidad]} hecha a mano.`}
+  imagen={principal ? { url: principal.social, alt: principal.alt } : undefined}
+>
   <p><a href="/catalogo">← Volver al catálogo</a></p>
 
   <div class="ficha">
@@ -58,6 +62,7 @@ const whatsappListo = numeroValido(numeroWhatsApp);
           class="agregar"
           data-agregar
           data-referencia={mochila.referencia}
+          data-slug={mochila.slug}
           data-nombre={mochila.nombre}
           data-tipo={mochila.tipo}
           data-precio={mochila.precio ?? ''}
@@ -105,6 +110,7 @@ const whatsappListo = numeroValido(numeroWhatsApp);
     const precio = d.precio ? Number(d.precio) : null;
     const item: ItemCarrito = {
       referencia: d.referencia!,
+      slug: d.slug!,
       nombre: d.nombre!,
       tipo: d.tipo === 'mostacilla' ? 'mostacilla' : 'unica',
       color: datos.get('color') ? String(datos.get('color')) : null,

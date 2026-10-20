@@ -30,7 +30,13 @@ export const mochila = defineType({
       type: 'slug',
       description: 'Se genera con el botón a partir de la referencia. No hace falta tocarla.',
       options: { source: 'referencia', maxLength: 40 },
-      validation: (r) => r.required(),
+      // El carrito solo acepta minúsculas, números y guiones; así el link del pedido nunca se rompe.
+      validation: (r) =>
+        r.required().custom((slug) =>
+          !slug?.current || /^[a-z0-9-]+$/.test(slug.current)
+            ? true
+            : 'Solo minúsculas, números y guiones. Usa el botón "Generate".',
+        ),
     }),
     defineField({
       name: 'comunidad',

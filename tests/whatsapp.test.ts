@@ -4,8 +4,8 @@ import { linkConsulta, linkPedido, mensajePedido, numeroValido } from '../src/li
 
 const NUMERO = '573001234567';
 const items: ItemCarrito[] = [
-  { referencia: 'A001', nombre: 'Sierra', tipo: 'unica', color: null, cantidad: 1, precio: 200000 },
-  { referencia: 'M001', nombre: 'Sol & Luna', tipo: 'mostacilla', color: 'Dorado', cantidad: 2, precio: 90000 },
+  { referencia: 'A001', slug: 'a001', nombre: 'Sierra', tipo: 'unica', color: null, cantidad: 1, precio: 200000 },
+  { referencia: 'M001', slug: 'm001', nombre: 'Sol & Luna', tipo: 'mostacilla', color: 'Dorado', cantidad: 2, precio: 90000 },
 ];
 const cliente = { nombre: '  Ana María ', ciudad: 'Medellín' };
 
@@ -32,14 +32,25 @@ describe('mensajePedido', () => {
     expect(m).toContain('Precios por confirmar + envío');
     expect(m).not.toMatch(/\$\s?0\b/);
   });
+
+  it('con origen, pone el link de cada mochila debajo de su línea (para la vista previa con foto)', () => {
+    const lineas = mensajePedido(items, cliente, 'https://ancestra.com.co/carrito').split('\n');
+    expect(lineas[2]).toBe('  https://ancestra.com.co/mochila/a001');
+    expect(lineas[4]).toBe('  https://ancestra.com.co/mochila/m001');
+  });
+
+  it('sin origen, o con uno que no es http(s), no pone links', () => {
+    expect(mensajePedido(items, cliente)).not.toContain('/mochila/');
+    expect(mensajePedido(items, cliente, 'javascript:alert(1)')).not.toContain('/mochila/');
+  });
 });
 
 describe('linkPedido', () => {
   it('codifica el mensaje para que "&", tildes y saltos de línea no rompan la URL', () => {
-    const url = new URL(linkPedido(NUMERO, items, cliente));
+    const url = new URL(linkPedido(NUMERO, items, cliente, 'https://ancestra.com.co'));
     expect(url.origin + url.pathname).toBe(`https://wa.me/${NUMERO}`);
     expect([...url.searchParams.keys()]).toEqual(['text']); // el "&" de "Sol & Luna" no creó otro parámetro
-    expect(url.searchParams.get('text')).toBe(mensajePedido(items, cliente));
+    expect(url.searchParams.get('text')).toBe(mensajePedido(items, cliente, 'https://ancestra.com.co'));
   });
 
   it('rechaza un número mal escrito o un carrito vacío', () => {

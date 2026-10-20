@@ -4,9 +4,9 @@ import {
   MAX_CANTIDAD_MOSTACILLA, type ItemCarrito,
 } from '../src/lib/carrito';
 
-const unica: ItemCarrito = { referencia: 'A001', nombre: 'Sierra', tipo: 'unica', color: null, cantidad: 1, precio: 200000 };
+const unica: ItemCarrito = { referencia: 'A001', slug: 'a001', nombre: 'Sierra', tipo: 'unica', color: null, cantidad: 1, precio: 200000 };
 const mostacilla = (color: string, cantidad = 1): ItemCarrito => ({
-  referencia: 'M001', nombre: 'Sol', tipo: 'mostacilla', color, cantidad, precio: 90000,
+  referencia: 'M001', slug: 'm001', nombre: 'Sol', tipo: 'mostacilla', color, cantidad, precio: 90000,
 });
 
 describe('agregar', () => {
@@ -81,5 +81,11 @@ describe('deserializar', () => {
   it('descarta las líneas manipuladas y conserva las válidas', () => {
     const json = JSON.stringify([unica, { ...unica, referencia: 'X', cantidad: -3 }, { nombre: 'sin ref' }]);
     expect(deserializar(json)).toEqual([unica]);
+  });
+
+  it('descarta carritos viejos sin slug y slugs que podrían inyectar algo en la URL', () => {
+    const { slug: _, ...sinSlug } = unica;
+    const json = JSON.stringify([sinSlug, { ...unica, slug: '../admin?x=1' }, { ...unica, slug: 'A001' }]);
+    expect(deserializar(json)).toEqual([]);
   });
 });

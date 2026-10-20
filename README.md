@@ -60,7 +60,7 @@ npm run build             # genera dist/
 
 1. *Workers & Pages → Create → Pages → Connect to Git* → este repo.
 2. Build command: `npm run build` · Output directory: `dist`.
-3. Variables de entorno: `PUBLIC_SANITY_PROJECT_ID`, `PUBLIC_SANITY_DATASET=production`, `PUBLIC_WHATSAPP_NUMBER`, `NODE_VERSION=24`.
+3. Variables de entorno: `PUBLIC_SANITY_PROJECT_ID`, `PUBLIC_SANITY_DATASET=production`, `PUBLIC_WHATSAPP_NUMBER`, `NODE_VERSION=24` y **`SITE_URL`** con la dirección pública: primero `https://<proyecto>.pages.dev` y después el dominio, cuando exista. Es la que usan los links del pedido y las vistas previas de WhatsApp.
 4. *Settings → Builds → Deploy hooks* → crear uno y copiar la URL.
 5. En Sanity, *Manage → API → Webhooks* → crear un webhook:
    - URL: la del *deploy hook*
@@ -85,6 +85,6 @@ Guardar también los originales de las fotos fuera de Sanity.
 ## Pendiente
 
 - [ ] Páginas: *Nuestra historia y artesanos*, *Envíos y devoluciones*, *Términos* y *Privacidad*. Las exige la Ley 1480 (art. 50) para venta a distancia, aunque el pago sea por WhatsApp.
-- [ ] Dominio (`.com` o `.com.co`) y `site` en `astro.config.mjs`.
+- [ ] Dominio (`.com` o `.com.co`) y la variable `SITE_URL` en Cloudflare.
 - [ ] Logo real y fotos reales.
 - [ ] Precios, cuando se definan. Mientras tanto, "Precio a consultar".

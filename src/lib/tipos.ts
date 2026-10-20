@@ -19,6 +19,8 @@ export interface Foto {
   url: string;
   /** URL de la versión pequeña (tarjetas del catálogo). */
   miniatura: string;
+  /** 1200×630 en JPG, para la vista previa de WhatsApp/Facebook (og:image). */
+  social: string;
   /** Texto alternativo para lectores de pantalla. */
   alt: string;
   ancho: number;

@@ -3,6 +3,8 @@ import type { TipoMochila } from './tipos';
 /** Una línea del carrito. Se guarda en localStorage, así que solo lleva datos simples. */
 export interface ItemCarrito {
   referencia: string;
+  /** Segmento de la URL de la ficha (/mochila/<slug>), para poner el link en el mensaje. */
+  slug: string;
   nombre: string;
   tipo: TipoMochila;
   /** Solo mostacilla. */
@@ -76,6 +78,8 @@ export function deserializar(json: string | null): ItemCarrito[] {
         typeof i === 'object' &&
         i !== null &&
         typeof i.referencia === 'string' &&
+        typeof i.slug === 'string' &&
+        /^[a-z0-9-]+$/.test(i.slug) &&
         typeof i.nombre === 'string' &&
         (i.tipo === 'unica' || i.tipo === 'mostacilla') &&
         (i.color === null || typeof i.color === 'string') &&

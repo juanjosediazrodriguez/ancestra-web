@@ -7,6 +7,7 @@ import type { Mochila } from './tipos';
 const foto = (archivo: string, alt: string) => ({
   url: `/muestra/${archivo}`,
   miniatura: `/muestra/${archivo}`,
+  social: `/muestra/${archivo}`,
   alt,
   ancho: 900,
   alto: 1200,
