@@ -4,9 +4,9 @@ import {
   MAX_CANTIDAD_MOSTACILLA, type ItemCarrito,
 } from '../src/lib/carrito';
 
-const unica: ItemCarrito = { referencia: 'A001', slug: 'a001', nombre: 'Sierra', tipo: 'unica', color: null, cantidad: 1, precio: 200000 };
+const unica: ItemCarrito = { referencia: 'A001', slug: 'a001', nombre: 'Sierra', tipo: 'unica', color: null, cantidad: 1, precio: 200000, foto: 'https://cdn.sanity.io/images/x/production/a.jpg' };
 const mostacilla = (color: string, cantidad = 1): ItemCarrito => ({
-  referencia: 'M001', slug: 'm001', nombre: 'Sol', tipo: 'mostacilla', color, cantidad, precio: 90000,
+  referencia: 'M001', slug: 'm001', nombre: 'Sol', tipo: 'mostacilla', color, cantidad, precio: 90000, foto: null,
 });
 
 describe('agregar', () => {
@@ -87,5 +87,16 @@ describe('deserializar', () => {
     const { slug: _, ...sinSlug } = unica;
     const json = JSON.stringify([sinSlug, { ...unica, slug: '../admin?x=1' }, { ...unica, slug: 'A001' }]);
     expect(deserializar(json)).toEqual([]);
+  });
+
+  it('conserva carritos sin foto (anteriores a este campo) y anula fotos de origen no confiable', () => {
+    const { foto: _, ...sinFoto } = unica;
+    const json = JSON.stringify([
+      sinFoto,
+      { ...unica, referencia: 'A002', foto: 'javascript:alert(1)' },
+      { ...unica, referencia: 'A003', foto: '//otro-sitio.com/a.jpg' },
+      { ...unica, referencia: 'A004', foto: '/muestra/tierra.svg' },
+    ]);
+    expect(deserializar(json).map((i) => i.foto)).toEqual([null, null, null, '/muestra/tierra.svg']);
   });
 });

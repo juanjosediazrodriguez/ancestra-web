@@ -12,7 +12,13 @@ export interface ItemCarrito {
   cantidad: number;
   /** En COP, o `null` si es "precio a consultar". */
   precio: number | null;
+  /** Miniatura para mostrar en el carrito, o `null` si la mochila no tiene foto. */
+  foto: string | null;
 }
+
+/** Solo se aceptan fotos del CDN de Sanity o rutas del propio sitio (datos de muestra). */
+export const fotoValida = (url: unknown): url is string =>
+  typeof url === 'string' && /^(https:\/\/cdn\.sanity\.io\/|\/(?!\/))/.test(url);
 
 export const MAX_CANTIDAD_MOSTACILLA = 10;
 
@@ -73,20 +79,23 @@ export function deserializar(json: string | null): ItemCarrito[] {
   try {
     const datos: unknown = JSON.parse(json);
     if (!Array.isArray(datos)) return [];
-    return datos.filter(
-      (i): i is ItemCarrito =>
-        typeof i === 'object' &&
-        i !== null &&
-        typeof i.referencia === 'string' &&
-        typeof i.slug === 'string' &&
-        /^[a-z0-9-]+$/.test(i.slug) &&
-        typeof i.nombre === 'string' &&
-        (i.tipo === 'unica' || i.tipo === 'mostacilla') &&
-        (i.color === null || typeof i.color === 'string') &&
-        Number.isInteger(i.cantidad) &&
-        i.cantidad > 0 &&
-        (i.precio === null || (typeof i.precio === 'number' && i.precio >= 0)),
-    );
+    return datos
+      .filter(
+        (i) =>
+          typeof i === 'object' &&
+          i !== null &&
+          typeof i.referencia === 'string' &&
+          typeof i.slug === 'string' &&
+          /^[a-z0-9-]+$/.test(i.slug) &&
+          typeof i.nombre === 'string' &&
+          (i.tipo === 'unica' || i.tipo === 'mostacilla') &&
+          (i.color === null || typeof i.color === 'string') &&
+          Number.isInteger(i.cantidad) &&
+          i.cantidad > 0 &&
+          (i.precio === null || (typeof i.precio === 'number' && i.precio >= 0)),
+      )
+      // Carritos guardados antes de que existiera `foto`, o con una URL que no es de confianza: sin foto.
+      .map((i): ItemCarrito => ({ ...i, foto: fotoValida(i.foto) ? i.foto : null }));
   } catch {
     return [];
   }

@@ -5,36 +5,116 @@ import { formatearPrecio } from '../lib/whatsapp';
 
 interface Props {
   mochila: Mochila;
+  /** Botón "Agregar" en piezas únicas disponibles. La mostacilla necesita elegir color en la ficha. */
+  agregarRapido?: boolean;
 }
-const { mochila } = Astro.props;
+const { mochila, agregarRapido = false } = Astro.props;
 const foto = mochila.fotos[0];
+const segunda = mochila.fotos[1];
+const url = `/mochila/${mochila.slug}`;
+const etiquetaNoDisponible = mochila.tipo === 'unica' ? 'Vendida' : 'Agotada';
+const conBoton = agregarRapido && mochila.disponible && mochila.tipo === 'unica';
 ---
 
-<article class="tarjeta">
-  <a href={`/mochila/${mochila.slug}`} class="tarjeta-enlace">
-    {foto ? (
-      <img src={foto.miniatura} alt={foto.alt} width={foto.ancho} height={foto.alto} loading="lazy" decoding="async" />
-    ) : (
-      <div class="sin-foto" aria-hidden="true">Sin foto</div>
-    )}
-    <h3>{mochila.nombre}</h3>
+<article class="tarjeta" data-disponible={mochila.disponible}>
+  <!-- El enlace cubre foto y datos; el botón queda fuera porque no puede ir dentro de un enlace -->
+  <a href={url} class="tarjeta-enlace">
+    <div class="tarjeta-foto">
+      {foto ? (
+        <>
+          <img src={foto.miniatura} alt={foto.alt} width={foto.ancho} height={foto.alto} loading="lazy" decoding="async" />
+          {segunda && <img class="foto-alterna" src={segunda.miniatura} alt="" width={segunda.ancho} height={segunda.alto} loading="lazy" decoding="async" />}
+        </>
+      ) : (
+        <div class="sin-foto" aria-hidden="true">Ancestra</div>
+      )}
+      {!mochila.disponible && <span class="cinta">{etiquetaNoDisponible}</span>}
+      {mochila.disponible && mochila.tipo === 'unica' && <span class="cinta cinta-clara">Pieza única</span>}
+      <span class="ver" aria-hidden="true">Ver mochila →</span>
+    </div>
+    <div class="tarjeta-cuerpo">
+      <h3>{mochila.nombre}</h3>
+      <p class="tarjeta-datos">
+        <span>{NOMBRE_COMUNIDAD[mochila.comunidad]}{mochila.tipo === 'mostacilla' && ' · Mostacilla'}</span>
+        <span class="tarjeta-precio">{formatearPrecio(mochila.precio)}</span>
+      </p>
+    </div>
   </a>
-  <p class="tarjeta-datos">
-    <span class="etiqueta">{NOMBRE_COMUNIDAD[mochila.comunidad]}</span>
-    <span class="etiqueta">{mochila.tipo === 'unica' ? 'Pieza única' : 'Mostacilla'}</span>
-    {!mochila.disponible && (
-      <span class="etiqueta etiqueta-vendida">{mochila.tipo === 'unica' ? 'Vendida' : 'Agotada'}</span>
-    )}
-  </p>
-  <p class="tarjeta-precio">{formatearPrecio(mochila.precio)}</p>
+  {conBoton && (
+    <button
+      type="button"
+      class="agregar-rapido"
+      data-agregar-rapido
+      data-referencia={mochila.referencia}
+      data-slug={mochila.slug}
+      data-nombre={mochila.nombre}
+      data-precio={mochila.precio ?? ''}
+      data-foto={foto?.miniatura ?? ''}
+      aria-label={`Agregar ${mochila.nombre} al carrito`}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true" data-icono-mas><path d="M12 5v14M5 12h14" /></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true" data-icono-listo style="display:none"><path d="m5 12 5 5 9-10" /></svg>
+      <span data-texto>Agregar</span>
+    </button>
+  )}
 </article>
 
 <style>
-  .tarjeta { background: var(--blanco); border-radius: var(--radio); overflow: hidden; height: 100%; }
-  .tarjeta-enlace { text-decoration: none; color: inherit; display: block; }
-  .tarjeta img, .sin-foto { aspect-ratio: 3 / 4; object-fit: cover; width: 100%; }
-  .sin-foto { display: grid; place-items: center; background: var(--crema-oscuro); }
-  h3 { margin: .75rem 1rem .25rem; font-size: 1.2rem; }
-  .tarjeta-datos { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 1rem; }
-  .tarjeta-precio { margin: .5rem 1rem 1rem; font-weight: 600; }
+  .tarjeta { display: flex; flex-direction: column; height: 100%; }
+  .tarjeta-enlace { display: flex; flex-direction: column; flex: 1; text-decoration: none; color: inherit; }
+  .tarjeta-foto {
+    position: relative; overflow: hidden; border-radius: var(--radio);
+    aspect-ratio: 4 / 5; background: var(--arena);
+  }
+  .tarjeta-foto img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.7s ease, opacity 0.45s ease;
+  }
+  .foto-alterna { opacity: 0; }
+  .sin-foto {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-family: var(--titulo); letter-spacing: 0.2em; text-transform: uppercase; color: var(--cafe-medio);
+  }
+  .cinta {
+    position: absolute; top: 0.75rem; left: 0.75rem;
+    font-size: 0.66rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase;
+    padding: 0.28rem 0.7rem; border-radius: 999px;
+    background: var(--cafe); color: var(--blanco);
+  }
+  .cinta-clara { background: rgb(255 250 242 / 0.92); color: var(--cafe); }
+  /* "Ver mochila" aparece al pasar el mouse, como el velo de una publicación de Instagram */
+  .ver {
+    position: absolute; inset-inline: 0; bottom: 0; padding: 2.5rem 1rem 1rem;
+    background: linear-gradient(to top, rgb(46 33 23 / 0.7), transparent);
+    color: var(--blanco); font-weight: 600; font-size: 0.92rem;
+    opacity: 0; transform: translateY(8px); transition: opacity 0.3s, transform 0.3s;
+  }
+  @media (hover: hover) {
+    .tarjeta-enlace:hover .ver, .tarjeta-enlace:focus-visible .ver { opacity: 1; transform: none; }
+    .tarjeta-enlace:hover .foto-alterna { opacity: 1; }
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .tarjeta-enlace:hover .tarjeta-foto img { transform: scale(1.04); }
+  }
+  .tarjeta[data-disponible='false'] .tarjeta-foto img { filter: grayscale(0.55); opacity: 0.85; }
+
+  .tarjeta-cuerpo { padding: 0.8rem 0.1rem 0; }
+  h3 { font-size: clamp(1.05rem, 2.4vw, 1.3rem); margin: 0 0 0.3rem; }
+  .tarjeta-datos {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.15rem 0.75rem;
+    margin: 0; font-size: 0.88rem; color: var(--cafe-medio);
+  }
+  .tarjeta-precio { font-weight: 600; color: var(--cafe); }
+
+  .agregar-rapido {
+    margin-top: 0.75rem; align-self: flex-start;
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
+    font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    padding: 0.5rem 1rem; border-radius: 999px;
+    border: 1.5px solid var(--cafe); background: transparent; color: var(--cafe);
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  }
+  .agregar-rapido:hover { background: var(--cafe); color: var(--blanco); }
+  .agregar-rapido[data-agregada='true'] { background: var(--oliva); border-color: var(--oliva); color: var(--blanco); }
+  @media (max-width: 480px) { .agregar-rapido { align-self: stretch; } }
 </style>

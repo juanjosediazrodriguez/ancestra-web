@@ -1,6 +1,7 @@
 ---
 import type { GetStaticPaths } from 'astro';
 import Base from '../../layouts/Base.astro';
+import TarjetaMochila from '../../components/TarjetaMochila.astro';
 import { numeroWhatsApp, obtenerMochilas } from '../../lib/catalogo';
 import { NOMBRE_COMUNIDAD, type Mochila } from '../../lib/tipos';
 import { formatearPrecio, linkConsulta, numeroValido } from '../../lib/whatsapp';
@@ -8,98 +9,142 @@ import { formatearPrecio, linkConsulta, numeroValido } from '../../lib/whatsapp'
 // Una página estática por mochila, generada al construir el sitio.
 export const getStaticPaths = (async () => {
   const mochilas = await obtenerMochilas();
-  return mochilas.map((mochila) => ({ params: { slug: mochila.slug }, props: { mochila } }));
+  return mochilas.map((mochila) => ({
+    params: { slug: mochila.slug },
+    props: {
+      mochila,
+      // Sugerencias: otras disponibles de la misma comunidad, y si no alcanza, cualquiera disponible
+      otras: [
+        ...mochilas.filter((m) => m.slug !== mochila.slug && m.disponible && m.comunidad === mochila.comunidad),
+        ...mochilas.filter((m) => m.slug !== mochila.slug && m.disponible && m.comunidad !== mochila.comunidad),
+      ].slice(0, 4),
+    },
+  }));
 }) satisfies GetStaticPaths;
 
 interface Props {
   mochila: Mochila;
+  otras: Mochila[];
 }
-const { mochila } = Astro.props;
-const [principal, ...resto] = mochila.fotos;
+const { mochila, otras } = Astro.props;
+const principal = mochila.fotos[0];
 const esUnica = mochila.tipo === 'unica';
 const whatsappListo = numeroValido(numeroWhatsApp);
+const comunidad = NOMBRE_COMUNIDAD[mochila.comunidad];
 ---
 
 <Base
   titulo={mochila.nombre}
-  descripcion={mochila.descripcion || `Mochila ${NOMBRE_COMUNIDAD[mochila.comunidad]} hecha a mano.`}
+  descripcion={mochila.descripcion || `Mochila ${comunidad} hecha a mano.`}
   imagen={principal ? { url: principal.social, alt: principal.alt } : undefined}
 >
-  <p><a href="/catalogo">← Volver al catálogo</a></p>
+  <div class="contenedor">
+    <nav class="migas" aria-label="Ruta">
+      <a href="/catalogo">Catálogo</a> <span aria-hidden="true">/</span>
+      <a href={`/catalogo?comunidad=${mochila.comunidad}`}>{comunidad}</a> <span aria-hidden="true">/</span>
+      <span aria-current="page">{mochila.nombre}</span>
+    </nav>
 
-  <div class="ficha">
-    <div class="galeria">
-      {principal ? (
-        <img src={principal.url} alt={principal.alt} width={principal.ancho} height={principal.alto} />
-      ) : (
-        <div class="sin-foto" aria-hidden="true">Sin foto</div>
-      )}
-      {resto.length > 0 && (
-        <ul class="miniaturas">
-          {resto.map((f) => (
-            <li><img src={f.miniatura} alt={f.alt} width={f.ancho} height={f.alto} loading="lazy" /></li>
-          ))}
+    <div class="ficha">
+      <div class="galeria-contenedor">
+        {mochila.fotos.length > 0 ? (
+          <ul class="galeria" aria-label={`Fotos de ${mochila.nombre}`} tabindex="0">
+            {mochila.fotos.map((f, i) => (
+              <li>
+                <img src={f.url} alt={f.alt} width={f.ancho} height={f.alto} loading={i === 0 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : undefined} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div class="sin-foto" aria-hidden="true">Ancestra</div>
+        )}
+        {mochila.fotos.length > 1 && <p class="pista">Desliza para ver las {mochila.fotos.length} fotos</p>}
+      </div>
+
+      <div class="detalle">
+        <span class="sobretitulo">{comunidad} · {esUnica ? 'Pieza única' : 'Mostacilla'}</span>
+        <h1>{mochila.nombre}</h1>
+        <p class="precio">{formatearPrecio(mochila.precio)}</p>
+
+        {mochila.disponible ? (
+          <form
+            class="agregar"
+            id="form-agregar"
+            data-agregar
+            data-referencia={mochila.referencia}
+            data-slug={mochila.slug}
+            data-nombre={mochila.nombre}
+            data-tipo={mochila.tipo}
+            data-precio={mochila.precio ?? ''}
+            data-foto={principal?.miniatura ?? ''}
+          >
+            {!esUnica && (
+              <div class="campos">
+                {mochila.colores.length > 0 && (
+                  <div>
+                    <label for="color">Color</label>
+                    <select id="color" name="color" required>
+                      {mochila.colores.map((c) => <option value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div class="campo-cantidad">
+                  <label for="cantidad">Cantidad</label>
+                  <input id="cantidad" name="cantidad" type="number" min="1" max="10" value="1" inputmode="numeric" required />
+                </div>
+              </div>
+            )}
+            <button class="boton boton-ancho" type="submit">Agregar al carrito</button>
+            <p class="confirmacion" role="status" data-confirmacion></p>
+          </form>
+        ) : (
+          <div class="no-disponible">
+            <p><strong>{esUnica ? 'Esta pieza ya se vendió.' : 'Este modelo está agotado por ahora.'}</strong> Si te gusta, podemos buscarte una parecida.</p>
+            {whatsappListo && (
+              <a class="boton boton-oscuro boton-ancho" href={linkConsulta(numeroWhatsApp, mochila.nombre, mochila.referencia)} rel="noopener" target="_blank">
+                Preguntar por una similar en WhatsApp
+              </a>
+            )}
+          </div>
+        )}
+
+        {esUnica && mochila.disponible && (
+          <p class="nota">✦ Pieza única: las fotos son de esta misma mochila y solo hay una.</p>
+        )}
+
+        <dl class="datos">
+          {mochila.descripcion && (<><dt>Descripción</dt><dd>{mochila.descripcion}</dd></>)}
+          {mochila.medidas && (<><dt>Medidas</dt><dd>{mochila.medidas}</dd></>)}
+          <dt>Comunidad</dt><dd>{comunidad}</dd>
+          <dt>Referencia</dt><dd>{mochila.referencia}</dd>
+          <dt>Envío</dt><dd>Por Servientrega a toda Colombia y a México. Se cotiza por WhatsApp según tu ciudad.</dd>
+        </dl>
+      </div>
+    </div>
+
+    {otras.length > 0 && (
+      <section class="otras" aria-labelledby="titulo-otras" data-revelar>
+        <h2 id="titulo-otras">También te pueden gustar</h2>
+        <ul class="rejilla">
+          {otras.map((m) => <li><TarjetaMochila mochila={m} /></li>)}
         </ul>
-      )}
-    </div>
-
-    <div class="detalle">
-      <h1>{mochila.nombre}</h1>
-      <p class="datos">
-        <span class="etiqueta">{NOMBRE_COMUNIDAD[mochila.comunidad]}</span>
-        <span class="etiqueta">{esUnica ? 'Pieza única' : 'Mostacilla'}</span>
-        <span class="etiqueta">Ref. {mochila.referencia}</span>
-      </p>
-      <p class="precio">{formatearPrecio(mochila.precio)}</p>
-      {mochila.descripcion && <p>{mochila.descripcion}</p>}
-      {mochila.medidas && <p><strong>Medidas:</strong> {mochila.medidas}</p>}
-      {esUnica && mochila.disponible && (
-        <p class="nota">Es una pieza única: las fotos son de esta misma mochila y solo hay una.</p>
-      )}
-
-      {mochila.disponible ? (
-        <form
-          class="agregar"
-          data-agregar
-          data-referencia={mochila.referencia}
-          data-slug={mochila.slug}
-          data-nombre={mochila.nombre}
-          data-tipo={mochila.tipo}
-          data-precio={mochila.precio ?? ''}
-        >
-          {!esUnica && mochila.colores.length > 0 && (
-            <div>
-              <label for="color">Color</label>
-              <select id="color" name="color" required>
-                {mochila.colores.map((c) => <option value={c}>{c}</option>)}
-              </select>
-            </div>
-          )}
-          {!esUnica && (
-            <div>
-              <label for="cantidad">Cantidad</label>
-              <input id="cantidad" name="cantidad" type="number" min="1" max="10" value="1" inputmode="numeric" required />
-            </div>
-          )}
-          <button class="boton" type="submit">Agregar al carrito</button>
-          <p class="confirmacion" role="status" data-confirmacion></p>
-        </form>
-      ) : (
-        <div class="no-disponible">
-          <p><span class="etiqueta etiqueta-vendida">{esUnica ? 'Vendida' : 'Agotada'}</span></p>
-          {whatsappListo && (
-            <a class="boton boton-secundario" href={linkConsulta(numeroWhatsApp, mochila.nombre, mochila.referencia)} rel="noopener" target="_blank">
-              Preguntar por una similar en WhatsApp
-            </a>
-          )}
-        </div>
-      )}
-    </div>
+      </section>
+    )}
   </div>
+
+  {mochila.disponible && (
+    <div class="barra-movil">
+      <div>
+        <p class="barra-nombre">{mochila.nombre}</p>
+        <p class="barra-precio">{formatearPrecio(mochila.precio)}</p>
+      </div>
+      <button class="boton" type="submit" form="form-agregar">Agregar</button>
+    </div>
+  )}
 </Base>
 
 <script>
-  import { agregar, type ItemCarrito } from '../../lib/carrito';
+  import { agregar, fotoValida, type ItemCarrito } from '../../lib/carrito';
   import { guardarCarrito, leerCarrito } from '../../scripts/almacen';
 
   const form = document.querySelector<HTMLFormElement>('[data-agregar]');
@@ -116,22 +161,76 @@ const whatsappListo = numeroValido(numeroWhatsApp);
       color: datos.get('color') ? String(datos.get('color')) : null,
       cantidad: Number(datos.get('cantidad') ?? 1) || 1,
       precio: Number.isFinite(precio) ? precio : null,
+      foto: fotoValida(d.foto) ? d.foto : null,
     };
     guardarCarrito(agregar(leerCarrito(), item));
     const aviso = form.querySelector<HTMLElement>('[data-confirmacion]');
-    if (aviso) aviso.innerHTML = 'Agregada al carrito. <a href="/carrito">Ver carrito</a>';
+    if (aviso) aviso.innerHTML = '✓ Agregada al carrito. <a href="/carrito">Ver carrito →</a>';
   });
 </script>
 
 <style>
-  .ficha { display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
-  .galeria img, .sin-foto { border-radius: var(--radio); width: 100%; }
-  .sin-foto { aspect-ratio: 3 / 4; display: grid; place-items: center; background: var(--crema-oscuro); }
-  .miniaturas { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; list-style: none; padding: 0; }
-  h1 { font-size: 2.2rem; margin-top: 0; }
-  .datos { display: flex; flex-wrap: wrap; gap: .4rem; }
-  .precio { font-size: 1.4rem; font-weight: 600; }
-  .nota { font-style: italic; color: var(--cafe-medio); }
-  .agregar { display: grid; gap: 1rem; max-width: 320px; margin-top: 1.5rem; }
+  .migas { display: flex; flex-wrap: wrap; gap: 0.4rem; font-size: 0.85rem; color: var(--cafe-medio); padding-block: 1.5rem; }
+  .migas a { text-decoration: none; }
+  .migas a:hover { text-decoration: underline; }
+
+  .ficha { display: grid; gap: clamp(1.5rem, 4vw, 4rem); grid-template-columns: 1fr; }
+  @media (min-width: 900px) { .ficha { grid-template-columns: 1.15fr 1fr; align-items: start; } }
+
+  /* Galería: carrusel deslizable en celular, fotos apiladas en computador */
+  .galeria {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; gap: 0.75rem; overflow-x: auto; scroll-snap-type: x mandatory;
+    scrollbar-width: none; border-radius: var(--radio);
+  }
+  .galeria::-webkit-scrollbar { display: none; }
+  .galeria li { flex: 0 0 100%; scroll-snap-align: start; }
+  .galeria img, .sin-foto { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--radio); background: var(--arena); }
+  .sin-foto { display: grid; place-items: center; font-family: var(--titulo); letter-spacing: 0.2em; text-transform: uppercase; color: var(--cafe-medio); }
+  .pista { font-size: 0.85rem; color: var(--cafe-medio); text-align: center; margin-top: 0.6rem; }
+  @media (min-width: 900px) {
+    .galeria { display: grid; grid-template-columns: 1fr 1fr; overflow: visible; }
+    .galeria li:first-child { grid-column: 1 / -1; }
+    .pista { display: none; }
+  }
+
+  .detalle { position: relative; }
+  @media (min-width: 900px) { .detalle { position: sticky; top: calc(var(--alto-encabezado) + 1.5rem); } }
+  .detalle h1 { font-size: clamp(2.2rem, 5vw, 3.4rem); margin-bottom: 0.3rem; }
+  .precio { font-size: 1.5rem; font-weight: 500; color: var(--cafe-medio); margin-bottom: 1.75rem; }
+
+  .agregar { display: grid; gap: 1rem; }
+  .campos { display: grid; grid-template-columns: 1fr 7rem; gap: 0.75rem; }
+  .campos:has(> :only-child) { grid-template-columns: 7rem; }
+  .boton-ancho { width: 100%; padding-block: 1rem; }
+  .confirmacion { margin: 0; font-weight: 500; color: var(--oliva); }
   .confirmacion:empty { display: none; }
+  .no-disponible { background: var(--arena); border-radius: var(--radio); padding: 1.25rem; }
+  .nota { font-family: var(--titulo); font-style: italic; color: var(--cafe-medio); margin-top: 1.25rem; }
+
+  .datos { margin: 2rem 0 0; border-top: 1px solid rgb(46 33 23 / 0.15); }
+  .datos dt {
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cafe-medio);
+    padding-top: 1rem;
+  }
+  .datos dd { margin: 0.25rem 0 0; padding-bottom: 1rem; border-bottom: 1px solid rgb(46 33 23 / 0.15); }
+
+  .otras { padding-top: clamp(4rem, 9vw, 6rem); }
+
+  /* Barra fija en celular para agregar sin tener que subir */
+  .barra-movil {
+    position: fixed; inset-inline: 0; bottom: 0; z-index: 55;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 0.75rem var(--margen); background: rgb(255 250 242 / 0.96); backdrop-filter: blur(8px);
+    box-shadow: 0 -8px 24px -12px rgb(46 33 23 / 0.3);
+  }
+  .barra-movil p { margin: 0; line-height: 1.25; }
+  .barra-nombre { font-family: var(--titulo); font-size: 1.05rem; }
+  .barra-precio { font-size: 0.9rem; color: var(--cafe-medio); }
+  @media (min-width: 900px) { .barra-movil { display: none; } }
+  @media (max-width: 899px) {
+    /* En celular la barra fija ya tiene la acción principal: el botón flotante estorbaría */
+    :global(.whatsapp-flotante) { display: none !important; }
+    :global(.pie) { padding-bottom: 4.5rem; }
+  }
 </style>

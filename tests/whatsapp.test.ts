@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemCarrito } from '../src/lib/carrito';
-import { linkConsulta, linkPedido, mensajePedido, numeroValido } from '../src/lib/whatsapp';
+import { linkConsulta, linkContacto, linkPedido, mensajePedido, numeroValido } from '../src/lib/whatsapp';
 
 const NUMERO = '573001234567';
 const items: ItemCarrito[] = [
-  { referencia: 'A001', slug: 'a001', nombre: 'Sierra', tipo: 'unica', color: null, cantidad: 1, precio: 200000 },
-  { referencia: 'M001', slug: 'm001', nombre: 'Sol & Luna', tipo: 'mostacilla', color: 'Dorado', cantidad: 2, precio: 90000 },
+  { referencia: 'A001', slug: 'a001', nombre: 'Sierra', tipo: 'unica', color: null, cantidad: 1, precio: 200000, foto: null },
+  { referencia: 'M001', slug: 'm001', nombre: 'Sol & Luna', tipo: 'mostacilla', color: 'Dorado', cantidad: 2, precio: 90000, foto: null },
 ];
 const cliente = { nombre: '  Ana María ', ciudad: 'Medellín' };
 
@@ -69,5 +69,11 @@ describe('numeroValido y linkConsulta', () => {
   it('el link de consulta menciona la referencia', () => {
     const texto = new URL(linkConsulta(NUMERO, 'Guajira', 'W001')).searchParams.get('text');
     expect(texto).toContain('ref. W001');
+  });
+
+  it('el botón flotante abre el chat con un saludo', () => {
+    const url = new URL(linkContacto(NUMERO));
+    expect(url.pathname).toBe(`/${NUMERO}`);
+    expect(url.searchParams.get('text')).toMatch(/^Hola Ancestra/);
   });
 });

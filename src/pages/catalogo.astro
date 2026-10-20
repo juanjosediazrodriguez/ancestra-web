@@ -4,85 +4,222 @@ import TarjetaMochila from '../components/TarjetaMochila.astro';
 import { obtenerMochilas } from '../lib/catalogo';
 import { COMUNIDADES, NOMBRE_COMUNIDAD } from '../lib/tipos';
 
+// "Ordenar" se quitó el 2026-10-20: sin precios definidos no aporta. La lógica sigue en src/lib/orden.ts (con pruebas).
 const mochilas = await obtenerMochilas();
+const disponibles = mochilas.filter((m) => m.disponible);
+const vendidas = mochilas.filter((m) => !m.disponible);
+
+const comunidades = [{ valor: '', texto: 'Todas' }, ...COMUNIDADES.map((c) => ({ valor: c, texto: NOMBRE_COMUNIDAD[c] }))];
+const tipos = [
+  { valor: '', texto: 'Todo' },
+  { valor: 'unica', texto: 'Piezas únicas' },
+  { valor: 'mostacilla', texto: 'Mostacilla' },
+];
 ---
 
 <Base titulo="Catálogo" descripcion="Catálogo de mochilas wayuu, arhuacas, kankuamas y de mostacilla, hechas a mano.">
-  <h1>Catálogo</h1>
+  <header class="contenedor cabecera">
+    <h1>Catálogo</h1>
+    <p>Tejidas a mano por artesanos wayuu, arhuacos y kankuamos. En las piezas únicas, las fotos son de esa misma mochila.</p>
+  </header>
 
-  <!-- Sin JavaScript se ven todas las mochilas; con JavaScript los filtros ocultan las que no aplican. -->
-  <form class="filtros" aria-label="Filtrar el catálogo" data-filtros hidden>
-    <fieldset>
-      <legend>Comunidad</legend>
-      <label class="opcion"><input type="radio" name="comunidad" value="" checked /> Todas</label>
-      {COMUNIDADES.map((c) => (
-        <label class="opcion"><input type="radio" name="comunidad" value={c} /> {NOMBRE_COMUNIDAD[c]}</label>
-      ))}
-    </fieldset>
-    <fieldset>
-      <legend>Tipo</legend>
-      <label class="opcion"><input type="radio" name="tipo" value="" checked /> Todas</label>
-      <label class="opcion"><input type="radio" name="tipo" value="unica" /> Pieza única</label>
-      <label class="opcion"><input type="radio" name="tipo" value="mostacilla" /> Mostacilla</label>
-    </fieldset>
-  </form>
+  <!-- Todos los filtros en una barra fija. Sin JavaScript queda oculta y se ve el catálogo completo. -->
+  <div class="barra" data-barra hidden>
+    <form class="contenedor filtros" aria-label="Filtrar el catálogo" data-filtros>
+      <fieldset class="pestanas">
+        <legend class="visualmente-oculto">Comunidad</legend>
+        {comunidades.map((c, i) => (
+          <label class="pestana">
+            <input type="radio" name="comunidad" value={c.valor} checked={i === 0} />
+            <span>{c.texto}</span>
+          </label>
+        ))}
+      </fieldset>
+      <div class="controles">
+        <fieldset class="segmentos">
+          <legend class="visualmente-oculto">Tipo</legend>
+          {tipos.map((t, i) => (
+            <label class="segmento">
+              <input type="radio" name="tipo" value={t.valor} checked={i === 0} />
+              <span>{t.texto}</span>
+            </label>
+          ))}
+        </fieldset>
+        <p class="resultado" aria-live="polite" data-resultado>{disponibles.length} {disponibles.length === 1 ? 'disponible' : 'disponibles'}</p>
+      </div>
+    </form>
+  </div>
 
-  <p class="resultado" aria-live="polite" data-resultado>{mochilas.length} mochilas</p>
+  <div class="contenedor contenido">
+    {mochilas.length === 0 ? (
+      <p class="vacio">Todavía no hay mochilas publicadas. Mientras tanto, mira nuestro <a href="https://www.instagram.com/mochilasancestra/" rel="noopener" target="_blank">Instagram</a>.</p>
+    ) : (
+      <>
+        <ul class="rejilla rejilla-catalogo" data-lista="disponibles">
+          {disponibles.map((m) => (
+            <li data-comunidad={m.comunidad} data-tipo={m.tipo}><TarjetaMochila mochila={m} agregarRapido /></li>
+          ))}
+        </ul>
+        <div class="vacio" data-sin-resultados hidden>
+          <p>No hay mochilas disponibles con esos filtros.</p>
+          <button type="button" class="boton boton-contorno" data-limpiar>Ver todas</button>
+        </div>
 
-  {mochilas.length === 0 ? (
-    <p>Todavía no hay mochilas publicadas.</p>
-  ) : (
-    <ul class="rejilla" data-lista>
-      {mochilas.map((m) => (
-        <li data-comunidad={m.comunidad} data-tipo={m.tipo}><TarjetaMochila mochila={m} /></li>
-      ))}
-    </ul>
-  )}
+        {vendidas.length > 0 && (
+          <section class="vendidas" aria-labelledby="titulo-vendidas" data-seccion-vendidas>
+            <div class="vendidas-cabecera">
+              <h2 id="titulo-vendidas">Ya encontraron hogar</h2>
+              <p>Estas ya se vendieron, pero sirven de inspiración: escríbenos y buscamos una parecida.</p>
+            </div>
+            <ul class="rejilla rejilla-catalogo" data-lista="vendidas">
+              {vendidas.map((m) => (
+                <li data-comunidad={m.comunidad} data-tipo={m.tipo}><TarjetaMochila mochila={m} /></li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </>
+    )}
+  </div>
 </Base>
 
 <script>
-  const form = document.querySelector<HTMLFormElement>('[data-filtros]');
-  const items = [...document.querySelectorAll<HTMLLIElement>('[data-lista] > li')];
+  import { agregar, fotoValida } from '../lib/carrito';
+  import { guardarCarrito, leerCarrito } from '../scripts/almacen';
+
+  const barra = document.querySelector<HTMLElement>('[data-barra]')!;
+  const form = document.querySelector<HTMLFormElement>('[data-filtros]')!;
+  const listas = [...document.querySelectorAll<HTMLUListElement>('[data-lista]')];
   const resultado = document.querySelector<HTMLElement>('[data-resultado]');
+  const sinResultados = document.querySelector<HTMLElement>('[data-sin-resultados]');
+  const seccionVendidas = document.querySelector<HTMLElement>('[data-seccion-vendidas]');
 
   function aplicar() {
-    if (!form) return;
     const datos = new FormData(form);
     const comunidad = String(datos.get('comunidad') ?? '');
     const tipo = String(datos.get('tipo') ?? '');
-    let visibles = 0;
-    for (const li of items) {
-      const ok = (!comunidad || li.dataset.comunidad === comunidad) && (!tipo || li.dataset.tipo === tipo);
-      li.hidden = !ok;
-      if (ok) visibles++;
+    let disponibles = 0;
+    let vendidas = 0;
+    for (const lista of listas) {
+      for (const li of lista.children as HTMLCollectionOf<HTMLLIElement>) {
+        const ok = (!comunidad || li.dataset.comunidad === comunidad) && (!tipo || li.dataset.tipo === tipo);
+        li.hidden = !ok;
+        if (ok) lista.dataset.lista === 'disponibles' ? disponibles++ : vendidas++;
+      }
     }
-    if (resultado) resultado.textContent = `${visibles} ${visibles === 1 ? 'mochila' : 'mochilas'}`;
-    // Deja la URL compartible: /catalogo?comunidad=wayuu
+    if (resultado) resultado.textContent = `${disponibles} ${disponibles === 1 ? 'disponible' : 'disponibles'}`;
+    if (sinResultados) sinResultados.hidden = disponibles > 0;
+    if (seccionVendidas) seccionVendidas.hidden = vendidas === 0;
+
+    // URL compartible: /catalogo?comunidad=wayuu&tipo=unica
     const url = new URL(location.href);
-    comunidad ? url.searchParams.set('comunidad', comunidad) : url.searchParams.delete('comunidad');
-    tipo ? url.searchParams.set('tipo', tipo) : url.searchParams.delete('tipo');
+    for (const [k, v] of [['comunidad', comunidad], ['tipo', tipo]]) v ? url.searchParams.set(k, v) : url.searchParams.delete(k);
     history.replaceState(null, '', url);
   }
 
-  if (form) {
-    form.hidden = false;
-    // Aplica los filtros que vengan en la URL (los enlaces de la portada usan ?comunidad=)
-    const params = new URLSearchParams(location.search);
-    for (const nombre of ['comunidad', 'tipo']) {
-      const valor = params.get(nombre);
-      const radio = valor ? form.querySelector<HTMLInputElement>(`input[name="${nombre}"][value="${CSS.escape(valor)}"]`) : null;
-      if (radio) radio.checked = true;
-    }
-    form.addEventListener('change', aplicar);
-    aplicar();
+  barra.hidden = false;
+
+  // Estado inicial desde la URL (los enlaces de la portada usan ?comunidad=)
+  const params = new URLSearchParams(location.search);
+  for (const nombre of ['comunidad', 'tipo']) {
+    const valor = params.get(nombre);
+    const radio = valor ? form.querySelector<HTMLInputElement>(`input[name="${nombre}"][value="${CSS.escape(valor)}"]`) : null;
+    if (radio) radio.checked = true;
   }
+  form.addEventListener('change', aplicar);
+  document.querySelector('[data-limpiar]')?.addEventListener('click', () => { form.reset(); aplicar(); });
+  aplicar();
+
+  // Sombra en la barra cuando queda pegada arriba
+  const centinela = document.createElement('div');
+  barra.before(centinela);
+  new IntersectionObserver(([e]) => barra.classList.toggle('pegada', !e.isIntersecting)).observe(centinela);
+
+  // Agregar rápido (solo piezas únicas disponibles)
+  document.querySelectorAll<HTMLButtonElement>('[data-agregar-rapido]').forEach((boton) => {
+    const d = boton.dataset;
+    const marcar = () => {
+      const enCarrito = leerCarrito().some((i) => i.referencia === d.referencia);
+      boton.dataset.agregada = String(enCarrito);
+      boton.querySelector<SVGElement>('[data-icono-mas]')?.style.setProperty('display', enCarrito ? 'none' : '');
+      boton.querySelector<SVGElement>('[data-icono-listo]')?.style.setProperty('display', enCarrito ? '' : 'none');
+      const texto = boton.querySelector('[data-texto]');
+      if (texto) texto.textContent = enCarrito ? 'En el carrito' : 'Agregar';
+      boton.setAttribute('aria-label', enCarrito ? `${d.nombre} ya está en el carrito` : `Agregar ${d.nombre} al carrito`);
+    };
+    marcar();
+    boton.addEventListener('click', () => {
+      const precio = d.precio ? Number(d.precio) : null;
+      guardarCarrito(agregar(leerCarrito(), {
+        referencia: d.referencia!, slug: d.slug!, nombre: d.nombre!, tipo: 'unica', color: null, cantidad: 1,
+        precio: Number.isFinite(precio) ? precio : null,
+        foto: fotoValida(d.foto) ? d.foto : null,
+      }));
+      marcar();
+    });
+    window.addEventListener('ancestra:carrito-cambio', marcar);
+  });
 </script>
 
 <style>
-  .filtros { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1rem; }
-  fieldset { border: 1px solid var(--crema-oscuro); border-radius: var(--radio); padding: .5rem 1rem; }
-  legend { font-weight: 600; }
-  .opcion { display: inline-flex; align-items: center; gap: .3rem; margin-right: 1rem; font-weight: normal; }
-  .opcion input { width: auto; }
-  .resultado { color: var(--cafe-medio); }
+  .cabecera { text-align: center; padding-block: clamp(2.5rem, 7vw, 4rem) clamp(1.5rem, 4vw, 2.25rem); }
+  .cabecera h1 { margin-bottom: 0.4rem; }
+  .cabecera p { max-width: 52ch; margin: 0 auto; color: var(--cafe-medio); }
+
+  /* ---------- barra fija ---------- */
+  .barra {
+    position: sticky; top: var(--alto-encabezado); z-index: 40;
+    background: rgb(245 237 224 / 0.95); backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgb(46 33 23 / 0.12);
+    transition: box-shadow 0.3s;
+  }
+  .barra:global(.pegada) { box-shadow: 0 8px 20px -14px rgb(46 33 23 / 0.45); }
+  .filtros { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.5rem 2rem; }
+  fieldset { border: 0; padding: 0; margin: 0; }
+
+  /* Pestañas de comunidad: texto en Fraunces con línea terracota bajo la activa */
+  .pestanas { display: flex; gap: clamp(1.25rem, 3vw, 2.25rem); overflow-x: auto; scrollbar-width: none; }
+  .pestanas::-webkit-scrollbar { display: none; }
+  .pestana { flex: none; margin: 0; cursor: pointer; font-weight: 400; }
+  /* El radio sigue accesible (teclado y lector de pantalla); se dibuja la pestaña */
+  .pestana input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .pestana span {
+    display: block; padding: 1rem 0 0.85rem;
+    font-family: var(--titulo); font-size: 1.2rem; color: var(--cafe-medio);
+    border-bottom: 3px solid transparent; margin-bottom: -1px;
+    transition: color 0.2s, border-color 0.2s;
+  }
+  .pestana:hover span { color: var(--cafe); }
+  .pestana input:checked + span { color: var(--cafe); border-bottom-color: var(--terracota); }
+  .pestana input:focus-visible + span { outline: 3px solid var(--terracota); outline-offset: 2px; border-radius: 4px; }
+
+  .controles { display: flex; align-items: center; gap: 1.25rem; padding-block: 0.7rem; }
+  .segmentos { display: inline-flex; gap: 0.2rem; padding: 0.22rem; background: var(--arena); border-radius: 999px; }
+  .segmento { margin: 0; cursor: pointer; font-weight: 500; font-size: 0.88rem; }
+  .segmento input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .segmento span { display: inline-block; padding: 0.38rem 0.9rem; border-radius: 999px; transition: background-color 0.2s; }
+  .segmento input:checked + span { background: var(--blanco); box-shadow: 0 1px 3px rgb(46 33 23 / 0.15); font-weight: 600; }
+  .segmento input:focus-visible + span { outline: 3px solid var(--terracota); outline-offset: 2px; }
+  .resultado { margin: 0; font-size: 0.88rem; color: var(--cafe-medio); white-space: nowrap; }
+  @media (max-width: 760px) {
+    .filtros { flex-direction: column; align-items: stretch; gap: 0; }
+    .pestanas { border-bottom: 1px solid rgb(46 33 23 / 0.12); }
+    .pestana span { font-size: 1.05rem; padding-block: 0.75rem 0.65rem; }
+    .controles { justify-content: space-between; }
+    .segmento span { padding-inline: 0.65rem; }
+  }
+
+  .contenido { padding-top: 2rem; }
+
+  /* ---------- rejilla ---------- */
+  .rejilla-catalogo { grid-template-columns: repeat(2, 1fr); column-gap: clamp(0.75rem, 2.5vw, 1.75rem); row-gap: clamp(1.75rem, 4vw, 3rem); }
+  @media (min-width: 860px) { .rejilla-catalogo { grid-template-columns: repeat(3, 1fr); } }
+
+  .vacio { padding: 3rem 0; text-align: center; color: var(--cafe-medio); }
+  .vacio p { font-family: var(--titulo); font-size: 1.4rem; color: var(--cafe); }
+
+  .vendidas { margin-top: clamp(4rem, 9vw, 6rem); padding-top: 3rem; border-top: 1px solid rgb(46 33 23 / 0.15); }
+  .vendidas-cabecera { margin-bottom: 2rem; max-width: 52ch; }
+  .vendidas-cabecera h2 { font-size: clamp(1.8rem, 4vw, 2.5rem); }
+  .vendidas-cabecera p { color: var(--cafe-medio); }
 </style>
