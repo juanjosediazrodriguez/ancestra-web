@@ -1,0 +1,72 @@
+---
+import '../styles/global.css';
+import { usandoMuestra } from '../lib/catalogo';
+
+interface Props {
+  titulo: string;
+  descripcion?: string;
+}
+
+const { titulo, descripcion = 'Mochilas tejidas a mano por artesanos wayuu, arhuacos y kankuamos. Envíos a toda Colombia y México.' } = Astro.props;
+const tituloCompleto = titulo === 'Inicio' ? 'Ancestra · Arte & Tradición' : `${titulo} · Ancestra`;
+const ruta = Astro.url.pathname;
+const actual = (href: string) => (href === '/' ? ruta === '/' : ruta.startsWith(href));
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{tituloCompleto}</title>
+    <meta name="description" content={descripcion} />
+    <meta property="og:title" content={tituloCompleto} />
+    <meta property="og:description" content={descripcion} />
+    <meta property="og:locale" content="es_CO" />
+  </head>
+  <body>
+    <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+    {usandoMuestra && (
+      <p class="aviso-muestra" role="note">Estás viendo datos de muestra. Configura Sanity para ver el catálogo real.</p>
+    )}
+
+    <header class="encabezado">
+      <a href="/" class="marca" aria-label="Ancestra, inicio">
+        <span class="marca-nombre">Ancestra</span>
+        <span class="marca-lema">Arte &amp; Tradición</span>
+      </a>
+      <nav aria-label="Principal">
+        <ul>
+          <li><a href="/" aria-current={actual('/') ? 'page' : undefined}>Inicio</a></li>
+          <li><a href="/catalogo" aria-current={actual('/catalogo') ? 'page' : undefined}>Catálogo</a></li>
+          <li>
+            <a href="/carrito" data-etiqueta-carrito aria-label="Carrito" aria-current={actual('/carrito') ? 'page' : undefined}>
+              Carrito <span class="contador" data-contador-carrito hidden>0</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </header>
+
+    <main id="contenido">
+      <slot />
+    </main>
+
+    <footer class="pie">
+      <p>Cada puntada guarda una memoria.</p>
+      <p>
+        <a href="https://www.instagram.com/mochilasancestra/" rel="noopener" target="_blank">Instagram</a>
+        ·
+        <a href="https://www.tiktok.com/@mochilasancestra" rel="noopener" target="_blank">TikTok</a>
+      </p>
+      <p class="pie-legal">Envíos nacionales y a México.</p>
+    </footer>
+
+    <script>
+      import { pintarContador } from '../scripts/almacen';
+      pintarContador();
+    </script>
+  </body>
+</html>

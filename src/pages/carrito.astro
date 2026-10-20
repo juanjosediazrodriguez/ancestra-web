@@ -1,0 +1,157 @@
+---
+import Base from '../layouts/Base.astro';
+import { numeroWhatsApp } from '../lib/catalogo';
+import { numeroValido } from '../lib/whatsapp';
+
+const whatsappListo = numeroValido(numeroWhatsApp);
+---
+
+<Base titulo="Carrito">
+  <h1>Tu carrito</h1>
+
+  <noscript><p>El carrito necesita JavaScript activado. También puedes escribirnos directo por WhatsApp o Instagram.</p></noscript>
+
+  <div data-carrito hidden>
+    <p data-vacio hidden>Tu carrito está vacío. <a href="/catalogo">Ver el catálogo</a></p>
+
+    <div data-contenido hidden>
+      <ul class="lineas" data-lineas></ul>
+      <p class="total" data-total aria-live="polite"></p>
+      <p class="nota">El envío se cotiza por WhatsApp según tu ciudad (Servientrega). Lo paga quien compra.</p>
+
+      <form class="finalizar" data-finalizar data-numero={numeroWhatsApp} novalidate>
+        <h2>Finalizar por WhatsApp</h2>
+        <p>Te abrimos WhatsApp con el pedido ya escrito. Ahí confirmamos disponibilidad, el envío y el pago.</p>
+        <div>
+          <label for="nombre">Tu nombre</label>
+          <input id="nombre" name="nombre" autocomplete="name" required maxlength="60" aria-describedby="error-nombre" />
+          <p class="error" id="error-nombre" data-error="nombre"></p>
+        </div>
+        <div>
+          <label for="ciudad">Ciudad de envío</label>
+          <input id="ciudad" name="ciudad" autocomplete="address-level2" required maxlength="60" aria-describedby="error-ciudad" />
+          <p class="error" id="error-ciudad" data-error="ciudad"></p>
+        </div>
+        {whatsappListo ? (
+          <button class="boton" type="submit">Enviar pedido por WhatsApp</button>
+        ) : (
+          <p class="error" role="alert">Falta configurar el número de WhatsApp (PUBLIC_WHATSAPP_NUMBER).</p>
+        )}
+      </form>
+    </div>
+  </div>
+</Base>
+
+<script>
+  import { cambiarCantidad, quitar, MAX_CANTIDAD_MOSTACILLA, type ItemCarrito } from '../lib/carrito';
+  import { formatearPrecio, linkPedido, textoTotal } from '../lib/whatsapp';
+  import { guardarCarrito, leerCarrito } from '../scripts/almacen';
+
+  const raiz = document.querySelector<HTMLElement>('[data-carrito]')!;
+  const vacio = raiz.querySelector<HTMLElement>('[data-vacio]')!;
+  const contenido = raiz.querySelector<HTMLElement>('[data-contenido]')!;
+  const lista = raiz.querySelector<HTMLUListElement>('[data-lineas]')!;
+  const total = raiz.querySelector<HTMLElement>('[data-total]')!;
+  const form = raiz.querySelector<HTMLFormElement>('[data-finalizar]')!;
+  raiz.hidden = false;
+
+  // Se construye el DOM con textContent (no innerHTML): el carrito viene de localStorage y no se confía en él.
+  function linea(item: ItemCarrito): HTMLLIElement {
+    const li = document.createElement('li');
+    li.className = 'linea';
+
+    const info = document.createElement('div');
+    const nombre = document.createElement('p');
+    nombre.className = 'linea-nombre';
+    nombre.textContent = item.nombre;
+    const detalle = document.createElement('p');
+    detalle.className = 'linea-detalle';
+    detalle.textContent = [`Ref. ${item.referencia}`, item.color && `Color ${item.color}`, item.tipo === 'unica' && 'Pieza única']
+      .filter(Boolean)
+      .join(' · ');
+    info.append(nombre, detalle);
+
+    const acciones = document.createElement('div');
+    acciones.className = 'linea-acciones';
+    if (item.tipo === 'mostacilla') {
+      const id = `cant-${item.referencia}-${item.color ?? ''}`.replace(/\W/g, '_');
+      const etiqueta = document.createElement('label');
+      etiqueta.htmlFor = id;
+      etiqueta.className = 'visualmente-oculto';
+      etiqueta.textContent = `Cantidad de ${item.nombre}`;
+      const input = document.createElement('input');
+      Object.assign(input, { id, type: 'number', min: '1', max: String(MAX_CANTIDAD_MOSTACILLA), value: String(item.cantidad) });
+      input.inputMode = 'numeric';
+      input.addEventListener('change', () => {
+        guardarCarrito(cambiarCantidad(leerCarrito(), item.referencia, item.color, Number(input.value) || 1));
+      });
+      acciones.append(etiqueta, input);
+    }
+    const precio = document.createElement('span');
+    precio.textContent = formatearPrecio(item.precio === null ? null : item.precio * item.cantidad);
+    const boton = document.createElement('button');
+    boton.type = 'button';
+    boton.className = 'boton boton-secundario';
+    boton.textContent = 'Quitar';
+    boton.setAttribute('aria-label', `Quitar ${item.nombre} del carrito`);
+    boton.addEventListener('click', () => guardarCarrito(quitar(leerCarrito(), item.referencia, item.color)));
+    acciones.append(precio, boton);
+
+    li.append(info, acciones);
+    return li;
+  }
+
+  function pintar() {
+    const carrito = leerCarrito();
+    vacio.hidden = carrito.length > 0;
+    contenido.hidden = carrito.length === 0;
+    lista.replaceChildren(...carrito.map(linea));
+    total.textContent = textoTotal(carrito);
+  }
+
+  function validar(campo: 'nombre' | 'ciudad', valor: string): boolean {
+    const error = form.querySelector<HTMLElement>(`[data-error="${campo}"]`)!;
+    const input = form.querySelector<HTMLInputElement>(`[name="${campo}"]`)!;
+    const ok = valor.trim().length >= 2;
+    error.textContent = ok ? '' : campo === 'nombre' ? 'Escribe tu nombre.' : 'Escribe la ciudad a la que va el envío.';
+    input.setAttribute('aria-invalid', String(!ok));
+    return ok;
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const datos = new FormData(form);
+    const cliente = { nombre: String(datos.get('nombre') ?? ''), ciudad: String(datos.get('ciudad') ?? '') };
+    const okNombre = validar('nombre', cliente.nombre);
+    const okCiudad = validar('ciudad', cliente.ciudad);
+    if (!okNombre || !okCiudad) {
+      form.querySelector<HTMLInputElement>('[aria-invalid="true"]')?.focus();
+      return;
+    }
+    const carrito = leerCarrito();
+    if (carrito.length === 0) return;
+    // El carrito no se vacía aquí: la venta se confirma en el chat, y si la clienta vuelve, sigue ahí.
+    window.location.href = linkPedido(form.dataset.numero ?? '', carrito, cliente);
+  });
+
+  window.addEventListener('ancestra:carrito-cambio', pintar);
+  window.addEventListener('storage', pintar);
+  pintar();
+</script>
+
+<style>
+  .lineas { list-style: none; padding: 0; display: grid; gap: .75rem; }
+  .lineas :global(.linea) {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; align-items: center;
+    background: var(--blanco); border-radius: var(--radio); padding: 1rem;
+  }
+  .lineas :global(.linea-nombre) { margin: 0; font-weight: 600; }
+  .lineas :global(.linea-detalle) { margin: 0; color: var(--cafe-medio); font-size: .9rem; }
+  .lineas :global(.linea-acciones) { display: flex; gap: .75rem; align-items: center; }
+  .lineas :global(.linea-acciones input) { width: 5rem; }
+  .total { font-size: 1.2rem; font-weight: 600; }
+  .nota { color: var(--cafe-medio); }
+  .finalizar { display: grid; gap: 1rem; max-width: 420px; margin-top: 2rem; }
+  .error { color: var(--error); margin: .25rem 0 0; font-size: .9rem; }
+  .error:empty { display: none; }
+</style>

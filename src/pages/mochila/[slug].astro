@@ -1,0 +1,131 @@
+---
+import type { GetStaticPaths } from 'astro';
+import Base from '../../layouts/Base.astro';
+import { numeroWhatsApp, obtenerMochilas } from '../../lib/catalogo';
+import { NOMBRE_COMUNIDAD, type Mochila } from '../../lib/tipos';
+import { formatearPrecio, linkConsulta, numeroValido } from '../../lib/whatsapp';
+
+// Una página estática por mochila, generada al construir el sitio.
+export const getStaticPaths = (async () => {
+  const mochilas = await obtenerMochilas();
+  return mochilas.map((mochila) => ({ params: { slug: mochila.slug }, props: { mochila } }));
+}) satisfies GetStaticPaths;
+
+interface Props {
+  mochila: Mochila;
+}
+const { mochila } = Astro.props;
+const [principal, ...resto] = mochila.fotos;
+const esUnica = mochila.tipo === 'unica';
+const whatsappListo = numeroValido(numeroWhatsApp);
+---
+
+<Base titulo={mochila.nombre} descripcion={mochila.descripcion || `Mochila ${NOMBRE_COMUNIDAD[mochila.comunidad]} hecha a mano.`}>
+  <p><a href="/catalogo">← Volver al catálogo</a></p>
+
+  <div class="ficha">
+    <div class="galeria">
+      {principal ? (
+        <img src={principal.url} alt={principal.alt} width={principal.ancho} height={principal.alto} />
+      ) : (
+        <div class="sin-foto" aria-hidden="true">Sin foto</div>
+      )}
+      {resto.length > 0 && (
+        <ul class="miniaturas">
+          {resto.map((f) => (
+            <li><img src={f.miniatura} alt={f.alt} width={f.ancho} height={f.alto} loading="lazy" /></li>
+          ))}
+        </ul>
+      )}
+    </div>
+
+    <div class="detalle">
+      <h1>{mochila.nombre}</h1>
+      <p class="datos">
+        <span class="etiqueta">{NOMBRE_COMUNIDAD[mochila.comunidad]}</span>
+        <span class="etiqueta">{esUnica ? 'Pieza única' : 'Mostacilla'}</span>
+        <span class="etiqueta">Ref. {mochila.referencia}</span>
+      </p>
+      <p class="precio">{formatearPrecio(mochila.precio)}</p>
+      {mochila.descripcion && <p>{mochila.descripcion}</p>}
+      {mochila.medidas && <p><strong>Medidas:</strong> {mochila.medidas}</p>}
+      {esUnica && mochila.disponible && (
+        <p class="nota">Es una pieza única: las fotos son de esta misma mochila y solo hay una.</p>
+      )}
+
+      {mochila.disponible ? (
+        <form
+          class="agregar"
+          data-agregar
+          data-referencia={mochila.referencia}
+          data-nombre={mochila.nombre}
+          data-tipo={mochila.tipo}
+          data-precio={mochila.precio ?? ''}
+        >
+          {!esUnica && mochila.colores.length > 0 && (
+            <div>
+              <label for="color">Color</label>
+              <select id="color" name="color" required>
+                {mochila.colores.map((c) => <option value={c}>{c}</option>)}
+              </select>
+            </div>
+          )}
+          {!esUnica && (
+            <div>
+              <label for="cantidad">Cantidad</label>
+              <input id="cantidad" name="cantidad" type="number" min="1" max="10" value="1" inputmode="numeric" required />
+            </div>
+          )}
+          <button class="boton" type="submit">Agregar al carrito</button>
+          <p class="confirmacion" role="status" data-confirmacion></p>
+        </form>
+      ) : (
+        <div class="no-disponible">
+          <p><span class="etiqueta etiqueta-vendida">{esUnica ? 'Vendida' : 'Agotada'}</span></p>
+          {whatsappListo && (
+            <a class="boton boton-secundario" href={linkConsulta(numeroWhatsApp, mochila.nombre, mochila.referencia)} rel="noopener" target="_blank">
+              Preguntar por una similar en WhatsApp
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+</Base>
+
+<script>
+  import { agregar, type ItemCarrito } from '../../lib/carrito';
+  import { guardarCarrito, leerCarrito } from '../../scripts/almacen';
+
+  const form = document.querySelector<HTMLFormElement>('[data-agregar]');
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const d = form.dataset;
+    const datos = new FormData(form);
+    const precio = d.precio ? Number(d.precio) : null;
+    const item: ItemCarrito = {
+      referencia: d.referencia!,
+      nombre: d.nombre!,
+      tipo: d.tipo === 'mostacilla' ? 'mostacilla' : 'unica',
+      color: datos.get('color') ? String(datos.get('color')) : null,
+      cantidad: Number(datos.get('cantidad') ?? 1) || 1,
+      precio: Number.isFinite(precio) ? precio : null,
+    };
+    guardarCarrito(agregar(leerCarrito(), item));
+    const aviso = form.querySelector<HTMLElement>('[data-confirmacion]');
+    if (aviso) aviso.innerHTML = 'Agregada al carrito. <a href="/carrito">Ver carrito</a>';
+  });
+</script>
+
+<style>
+  .ficha { display: grid; gap: 2rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+  .galeria img, .sin-foto { border-radius: var(--radio); width: 100%; }
+  .sin-foto { aspect-ratio: 3 / 4; display: grid; place-items: center; background: var(--crema-oscuro); }
+  .miniaturas { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; list-style: none; padding: 0; }
+  h1 { font-size: 2.2rem; margin-top: 0; }
+  .datos { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .precio { font-size: 1.4rem; font-weight: 600; }
+  .nota { font-style: italic; color: var(--cafe-medio); }
+  .agregar { display: grid; gap: 1rem; max-width: 320px; margin-top: 1.5rem; }
+  .confirmacion:empty { display: none; }
+</style>

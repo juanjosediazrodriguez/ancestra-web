@@ -1,0 +1,88 @@
+---
+import Base from '../layouts/Base.astro';
+import TarjetaMochila from '../components/TarjetaMochila.astro';
+import { obtenerMochilas } from '../lib/catalogo';
+import { COMUNIDADES, NOMBRE_COMUNIDAD } from '../lib/tipos';
+
+const mochilas = await obtenerMochilas();
+---
+
+<Base titulo="Catálogo" descripcion="Catálogo de mochilas wayuu, arhuacas, kankuamas y de mostacilla, hechas a mano.">
+  <h1>Catálogo</h1>
+
+  <!-- Sin JavaScript se ven todas las mochilas; con JavaScript los filtros ocultan las que no aplican. -->
+  <form class="filtros" aria-label="Filtrar el catálogo" data-filtros hidden>
+    <fieldset>
+      <legend>Comunidad</legend>
+      <label class="opcion"><input type="radio" name="comunidad" value="" checked /> Todas</label>
+      {COMUNIDADES.map((c) => (
+        <label class="opcion"><input type="radio" name="comunidad" value={c} /> {NOMBRE_COMUNIDAD[c]}</label>
+      ))}
+    </fieldset>
+    <fieldset>
+      <legend>Tipo</legend>
+      <label class="opcion"><input type="radio" name="tipo" value="" checked /> Todas</label>
+      <label class="opcion"><input type="radio" name="tipo" value="unica" /> Pieza única</label>
+      <label class="opcion"><input type="radio" name="tipo" value="mostacilla" /> Mostacilla</label>
+    </fieldset>
+  </form>
+
+  <p class="resultado" aria-live="polite" data-resultado>{mochilas.length} mochilas</p>
+
+  {mochilas.length === 0 ? (
+    <p>Todavía no hay mochilas publicadas.</p>
+  ) : (
+    <ul class="rejilla" data-lista>
+      {mochilas.map((m) => (
+        <li data-comunidad={m.comunidad} data-tipo={m.tipo}><TarjetaMochila mochila={m} /></li>
+      ))}
+    </ul>
+  )}
+</Base>
+
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-filtros]');
+  const items = [...document.querySelectorAll<HTMLLIElement>('[data-lista] > li')];
+  const resultado = document.querySelector<HTMLElement>('[data-resultado]');
+
+  function aplicar() {
+    if (!form) return;
+    const datos = new FormData(form);
+    const comunidad = String(datos.get('comunidad') ?? '');
+    const tipo = String(datos.get('tipo') ?? '');
+    let visibles = 0;
+    for (const li of items) {
+      const ok = (!comunidad || li.dataset.comunidad === comunidad) && (!tipo || li.dataset.tipo === tipo);
+      li.hidden = !ok;
+      if (ok) visibles++;
+    }
+    if (resultado) resultado.textContent = `${visibles} ${visibles === 1 ? 'mochila' : 'mochilas'}`;
+    // Deja la URL compartible: /catalogo?comunidad=wayuu
+    const url = new URL(location.href);
+    comunidad ? url.searchParams.set('comunidad', comunidad) : url.searchParams.delete('comunidad');
+    tipo ? url.searchParams.set('tipo', tipo) : url.searchParams.delete('tipo');
+    history.replaceState(null, '', url);
+  }
+
+  if (form) {
+    form.hidden = false;
+    // Aplica los filtros que vengan en la URL (los enlaces de la portada usan ?comunidad=)
+    const params = new URLSearchParams(location.search);
+    for (const nombre of ['comunidad', 'tipo']) {
+      const valor = params.get(nombre);
+      const radio = valor ? form.querySelector<HTMLInputElement>(`input[name="${nombre}"][value="${CSS.escape(valor)}"]`) : null;
+      if (radio) radio.checked = true;
+    }
+    form.addEventListener('change', aplicar);
+    aplicar();
+  }
+</script>
+
+<style>
+  .filtros { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1rem; }
+  fieldset { border: 1px solid var(--crema-oscuro); border-radius: var(--radio); padding: .5rem 1rem; }
+  legend { font-weight: 600; }
+  .opcion { display: inline-flex; align-items: center; gap: .3rem; margin-right: 1rem; font-weight: normal; }
+  .opcion input { width: auto; }
+  .resultado { color: var(--cafe-medio); }
+</style>

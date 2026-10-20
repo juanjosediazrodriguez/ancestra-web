@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-label="Foto de muestra">
+  <rect width="900" height="1200" fill="#efe4cf"/>
+  <g fill="none" stroke-width="40">
+    <path d="M0 300 L150 200 L300 300 L450 200 L600 300 L750 200 L900 300" stroke="#a07c4f"/>
+    <path d="M0 600 L150 500 L300 600 L450 500 L600 600 L750 500 L900 600" stroke="#5e4630"/>
+    <path d="M0 900 L150 800 L300 900 L450 800 L600 900 L750 800 L900 900" stroke="#a07c4f"/>
+  </g>
+  <text x="450" y="1120" font-family="Georgia, serif" font-size="48" text-anchor="middle" fill="#3b2a1a">Foto de muestra</text>
+</svg>

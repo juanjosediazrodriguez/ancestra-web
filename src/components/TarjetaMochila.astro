@@ -1,0 +1,40 @@
+---
+import type { Mochila } from '../lib/tipos';
+import { NOMBRE_COMUNIDAD } from '../lib/tipos';
+import { formatearPrecio } from '../lib/whatsapp';
+
+interface Props {
+  mochila: Mochila;
+}
+const { mochila } = Astro.props;
+const foto = mochila.fotos[0];
+---
+
+<article class="tarjeta">
+  <a href={`/mochila/${mochila.slug}`} class="tarjeta-enlace">
+    {foto ? (
+      <img src={foto.miniatura} alt={foto.alt} width={foto.ancho} height={foto.alto} loading="lazy" decoding="async" />
+    ) : (
+      <div class="sin-foto" aria-hidden="true">Sin foto</div>
+    )}
+    <h3>{mochila.nombre}</h3>
+  </a>
+  <p class="tarjeta-datos">
+    <span class="etiqueta">{NOMBRE_COMUNIDAD[mochila.comunidad]}</span>
+    <span class="etiqueta">{mochila.tipo === 'unica' ? 'Pieza única' : 'Mostacilla'}</span>
+    {!mochila.disponible && (
+      <span class="etiqueta etiqueta-vendida">{mochila.tipo === 'unica' ? 'Vendida' : 'Agotada'}</span>
+    )}
+  </p>
+  <p class="tarjeta-precio">{formatearPrecio(mochila.precio)}</p>
+</article>
+
+<style>
+  .tarjeta { background: var(--blanco); border-radius: var(--radio); overflow: hidden; height: 100%; }
+  .tarjeta-enlace { text-decoration: none; color: inherit; display: block; }
+  .tarjeta img, .sin-foto { aspect-ratio: 3 / 4; object-fit: cover; width: 100%; }
+  .sin-foto { display: grid; place-items: center; background: var(--crema-oscuro); }
+  h3 { margin: .75rem 1rem .25rem; font-size: 1.2rem; }
+  .tarjeta-datos { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 1rem; }
+  .tarjeta-precio { margin: .5rem 1rem 1rem; font-weight: 600; }
+</style>

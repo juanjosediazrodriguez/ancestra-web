@@ -1,0 +1,58 @@
+---
+import Base from '../layouts/Base.astro';
+import TarjetaMochila from '../components/TarjetaMochila.astro';
+import { obtenerMochilas } from '../lib/catalogo';
+import { COMUNIDADES, NOMBRE_COMUNIDAD } from '../lib/tipos';
+
+const mochilas = await obtenerMochilas();
+const recientes = mochilas.filter((m) => m.disponible).slice(0, 4);
+
+const ORIGEN: Record<(typeof COMUNIDADES)[number], string> = {
+  wayuu: 'La Guajira',
+  arhuaca: 'Sierra Nevada de Santa Marta',
+  kankuama: 'Sierra Nevada de Santa Marta',
+};
+---
+
+<Base titulo="Inicio">
+  <section class="portada">
+    <h1>Cada puntada guarda una memoria</h1>
+    <p>Mochilas hechas a mano por artesanos wayuu, arhuacos y kankuamos. Envíos a toda Colombia y a México.</p>
+    <a class="boton" href="/catalogo">Ver el catálogo</a>
+  </section>
+
+  {recientes.length > 0 && (
+    <section aria-labelledby="titulo-recientes">
+      <h2 id="titulo-recientes">Recién llegadas</h2>
+      <ul class="rejilla">
+        {recientes.map((m) => <li><TarjetaMochila mochila={m} /></li>)}
+      </ul>
+    </section>
+  )}
+
+  <section aria-labelledby="titulo-comunidades">
+    <h2 id="titulo-comunidades">Nuestras comunidades</h2>
+    <ul class="comunidades">
+      {COMUNIDADES.map((c) => (
+        <li>
+          <a href={`/catalogo?comunidad=${c}`}>
+            <span class="comunidad-nombre">{NOMBRE_COMUNIDAD[c]}</span>
+            <span>{ORIGEN[c]}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+</Base>
+
+<style>
+  .portada { text-align: center; padding: 3rem 1rem; }
+  .portada h1 { font-size: clamp(2rem, 5vw, 3.2rem); margin-bottom: .5rem; }
+  .portada p { max-width: 40ch; margin: 0 auto 1.5rem; }
+  .comunidades { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); list-style: none; padding: 0; }
+  .comunidades a {
+    display: flex; flex-direction: column; padding: 1.5rem; border-radius: var(--radio);
+    background: var(--blanco); text-decoration: none; color: var(--cafe);
+  }
+  .comunidad-nombre { font-family: var(--serif); font-size: 1.5rem; }
+</style>
